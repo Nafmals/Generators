@@ -452,9 +452,7 @@
       <button class="btn-primary" type="submit" style="width:100%;margin-top:6px;">دخول</button>
       <div id="login-error"></div>
       <p style="margin-top:10px;font-size:11px;color:#6b7280;">
-      
-      <br>
-  
+        حسابات افتراضية للتجربة: admin / 1234 – user1 / 1234
       </p>
     </form>
   </div>
@@ -680,7 +678,7 @@
     let selectedId = null;
     const LOCAL_KEY = "generatorSystemData_v1";
 
-    // ====== مستخدمين (عدّل هذه حسب الحاجة) ======
+    // ====== مستخدمين ======
     const USERS = [
       {username:"admin", password:"1234", role:"admin"},
       {username:"user1", password:"1234", role:"user"}
@@ -748,14 +746,12 @@
     function applyRoleUI(){
       if(!currentUser) return;
       currentUserLabel.textContent = currentUser.username + (isAdmin() ? " (مشرف)" : "");
-
-      // أزرار خاصة بالأدمن
       deleteGenBtn.style.display = isAdmin() ? "" : "none";
       expJSON.style.display = isAdmin() ? "" : "none";
       importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
     }
 
-    // تسجيل الدخول
+    // ====== تسجيل الدخول ======
     loginForm.addEventListener("submit", (e)=>{
       e.preventDefault();
       const u = loginUserInput.value.trim();
@@ -773,7 +769,7 @@
       applyRoleUI();
     });
 
-    // تسجيل الخروج
+    // ====== تسجيل الخروج ======
     logoutBtn.addEventListener("click", ()=>{
       currentUser = null;
       appRoot.style.display = "none";
@@ -1133,7 +1129,6 @@
       }
 
       if(action === "expense"){
-        // السماح لغير الأدمن بإضافة مصروف إذا الخدمة موجودة
         if(!gen.serviceHistory) gen.serviceHistory = [];
         let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
         if(!svc){
@@ -1386,7 +1381,7 @@
       buildReports();
     });
 
-    // تصدير تقارير التبويبات CSV
+    // ====== تصدير تقارير التبويبات CSV ======
     repCSV.addEventListener("click", ()=>{
       const activeTabBtn = document.querySelector(".tab-btn.active");
       const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : "summary";
@@ -1500,7 +1495,7 @@
       });
     });
 
-    // ====== تصدير / استيراد JSON (أدمن فقط في الاستيراد) ======
+    // ====== تصدير / استيراد JSON ======
     expJSON.addEventListener("click", ()=>{
       if(!isAdmin()){
         alert("تصدير JSON متاح للمشرف فقط.");
@@ -1515,6 +1510,176 @@
       URL.revokeObjectURL(url);
     });
 
-    impJ
+    impJSON.addEventListener("change", (e)=>{
+      if(!isAdmin()){
+        alert("استيراد JSON متاح للمشرف فقط.");
+        e.target.value = "";
+        return;
+      }
+      const file = e.target.files?.[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const data = JSON.parse(String(reader.result));
+          if(!data || !Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
+          data.generators = data.generators.map((g,idx)=>({
+            id: g.id || crypto.randomUUID(),
+            name: g.name || ("Generator #"+(idx+1)),
+            lastServiceMeter: Number(g.lastServiceMeter||0),
+            lastServiceDate: g.lastServiceDate || todayStr(),
+            readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
+            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
+              date:h.date,
+              meter:Number(h.meter),
+              cost: h.cost != null ? Number(h.cost) : null,
+              currency: h.currency || "IQD",
+              costNote: h.costNote || ""
+            })) : []
+          }));
+          state = data;
+          selectedId = state.generators[0]?.id || null;
+          renderGenList();
+          renderDetail();
+          buildReports();
+        }catch(err){
+          alert("تعذر استيراد الملف: " + (err.message||err));
+        }
+      };
+      reader.readAsText(file);
+    });
 
-  
+    // ====== حفظ البيانات محلياً في المتصفح ======
+    saveLocalBtn.addEventListener("click", ()=>{
+      try{
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+        alert("تم حفظ البيانات على هذا الجهاز بنجاح ✅");
+      }catch(err){
+        console.error("LocalStorage error", err);
+        alert("تعذر حفظ البيانات محلياً (ربما مساحة التخزين ممتلئة).");
+      }
+    });
+
+    // ====== ملخص CSV بسيط من الهيدر ======
+    expCSV.addEventListener("click", ()=>{
+      const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
+      const lines = [header.join(",")];
+      state.generators.forEach(gen=>{
+        const cm = currentMeter(gen) ?? "";
+        const since = hoursSinceService(gen);
+        const next  = nextDueAt(gen);
+        const st = statusObj(gen);
+        lines.push([
+          `"${(gen.name||"").replace(/"/g,'""')}"`,
+          gen.lastServiceMeter ?? "",
+          gen.lastServiceDate ?? "",
+          cm,
+          since,
+          next,
+          st.label
+        ].join(","));
+      });
+      const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "generators-quick-summary.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ====== تحميل البيانات من LocalStorage أو من generators.json ======
+    async function loadInitialData(){
+      try {
+        const stored = localStorage.getItem(LOCAL_KEY);
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            if (data && Array.isArray(data.generators)) {
+              state = {
+                generators: data.generators.map((g, idx) => ({
+                  id: g.id || crypto.randomUUID(),
+                  name: g.name || ("Generator #" + (idx + 1)),
+                  lastServiceMeter: Number(g.lastServiceMeter || 0),
+                  lastServiceDate: g.lastServiceDate || todayStr(),
+                  readings: Array.isArray(g.readings) ? g.readings.map(r => ({
+                    date: r.date,
+                    meter: Number(r.meter)
+                  })) : [],
+                  serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
+                    date: h.date,
+                    meter: Number(h.meter),
+                    cost: h.cost != null ? Number(h.cost) : null,
+                    currency: h.currency || "IQD",
+                    costNote: h.costNote || ""
+                  })) : []
+                }))
+              };
+              selectedId = state.generators[0]?.id || null;
+              renderGenList();
+              renderDetail();
+              buildReports();
+              console.log("Loaded data from localStorage");
+              return;
+            }
+          } catch(e){
+            console.warn("تعذر قراءة البيانات من التخزين المحلي، سيتم استخدام ملف JSON", e);
+          }
+        }
+
+        const res = await fetch("generators.json");
+        if (!res.ok) {
+          console.warn("لم يتم العثور على ملف generators.json");
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data || !Array.isArray(data.generators)) {
+          console.warn("صيغة ملف JSON غير صحيحة");
+          return;
+        }
+
+        state = {
+          generators: data.generators.map((g, idx) => ({
+            id: g.id || crypto.randomUUID(),
+            name: g.name || ("Generator #" + (idx + 1)),
+            lastServiceMeter: Number(g.lastServiceMeter || 0),
+            lastServiceDate: g.lastServiceDate || todayStr(),
+            readings: Array.isArray(g.readings) ? g.readings.map(r => ({
+              date: r.date,
+              meter: Number(r.meter)
+            })) : [],
+            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
+              date: h.date,
+              meter: Number(h.meter),
+              cost: h.cost != null ? Number(h.cost) : null,
+              currency: h.currency || "IQD",
+              costNote: h.costNote || ""
+            })) : []
+          }))
+        };
+
+        selectedId = state.generators[0]?.id || null;
+        renderGenList();
+        renderDetail();
+        buildReports();
+        console.log("Loaded data from generators.json");
+      } catch (err) {
+        console.error("خطأ أثناء تحميل البيانات", err);
+      }
+    }
+
+    // ====== تهيئة أولية ======
+    (function init(){
+      genDate.value = todayStr();
+      repFrom.value = "";
+      repTo.value   = "";
+      renderGenList();
+      renderDetail();
+      buildReports();
+      loadInitialData();
+    })();
+  </script>
+</body>
+</html>
