@@ -1481,14 +1481,16 @@ repCSV.addEventListener("click", ()=>{
     }
 
     // ====== تهيئة أولية ======
-    (function init(){
+     (function init(){
       genDate.value = todayStr();
       repFrom.value = "";
       repTo.value   = "";
+
+      // عرض أولي فارغ
       renderGenList();
       renderDetail();
       buildReports();
+
+      // تحميل البيانات من ملف generators.json على GitHub
+      loadInitialData();
     })();
-  </script>
-</body>
-</html>
