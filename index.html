@@ -614,9 +614,7 @@
       generators: []
     };
     let selectedId = null;
-
-    // ====== DOM helper ======
-    const $ = (id)=>document.getElementById(id);
+    const LOCAL_KEY = "generatorSystemData_v1";
 
     const genName   = $("gen-name");
     const genSmr    = $("gen-smr");
@@ -653,6 +651,7 @@
 
     const expJSON = $("export-json");
     const impJSON = $("import-json");
+    const saveLocalBtn = $("save-local");
     const expCSV  = $("export-csv");
 
     // ====== util ======
