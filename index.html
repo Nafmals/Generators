@@ -1431,6 +1431,54 @@ repCSV.addEventListener("click", ()=>{
       a.click();
       URL.revokeObjectURL(url);
     });
+    // ====== تحميل البيانات من generators.json تلقائياً ======
+    async function loadInitialData(){
+      try {
+        const res = await fetch("generators.json");
+        if (!res.ok) {
+          console.warn("لم يتم العثور على ملف generators.json");
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data || !Array.isArray(data.generators)) {
+          console.warn("صيغة ملف JSON غير صحيحة");
+          return;
+        }
+
+        // تعيين البيانات في state بنفس شكل الاستيراد اليدوي
+        state = {
+          generators: data.generators.map((g, idx) => ({
+            id: g.id || crypto.randomUUID(),
+            name: g.name || ("Generator #" + (idx + 1)),
+            lastServiceMeter: Number(g.lastServiceMeter || 0),
+            lastServiceDate: g.lastServiceDate || todayStr(),
+            readings: Array.isArray(g.readings) ? g.readings.map(r => ({
+              date: r.date,
+              meter: Number(r.meter)
+            })) : [],
+            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
+              date: h.date,
+              meter: Number(h.meter),
+              cost: h.cost != null ? Number(h.cost) : null,
+              currency: h.currency || "IQD",
+              costNote: h.costNote || ""
+            })) : []
+          }))
+        };
+
+        // اختيار أول مولّد
+        selectedId = state.generators[0]?.id || null;
+
+        // إعادة رسم الواجهة
+        renderGenList();
+        renderDetail();
+        buildReports();
+      } catch (err) {
+        console.error("خطأ أثناء تحميل ملف generators.json", err);
+      }
+    }
 
     // ====== تهيئة أولية ======
     (function init(){
