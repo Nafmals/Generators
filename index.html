@@ -608,13 +608,18 @@
     </section>
   </main>
 
-  <script>
+    <script>
     // ====== الحالة العامة ======
     let state = {
       generators: []
     };
     let selectedId = null;
     const LOCAL_KEY = "generatorSystemData_v1";
+
+    // ====== DOM helper ======
+    const $ = (id)=>document.getElementById(id);
+
+    const genName   = $("gen-name");
 
     const genName   = $("gen-name");
     const genSmr    = $("gen-smr");
@@ -1406,9 +1411,7 @@ repCSV.addEventListener("click", ()=>{
       reader.readAsText(file);
     });
 
-    // ====== ملخص CSV بسيط من الهيدر ======
-    expCSV.addEventListener("click", ()=>{
-          // ====== حفظ البيانات محلياً في المتصفح ======
+     // ====== حفظ البيانات محلياً في المتصفح ======
     saveLocalBtn.addEventListener("click", ()=>{
       try{
         localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
@@ -1418,8 +1421,35 @@ repCSV.addEventListener("click", ()=>{
         alert("تعذر حفظ البيانات محلياً (ربما مساحة التخزين ممتلئة).");
       }
     });
-      
+
+    // ====== ملخص CSV بسيط من الهيدر ======
+    expCSV.addEventListener("click", ()=>{
       const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
+      const lines = [header.join(",")];
+      state.generators.forEach(gen=>{
+        const cm = currentMeter(gen) ?? "";
+        const since = hoursSinceService(gen);
+        const next  = nextDueAt(gen);
+        const st = statusObj(gen);
+        lines.push([
+          `"${(gen.name||"").replace(/"/g,'""')}"`,
+          gen.lastServiceMeter ?? "",
+          gen.lastServiceDate ?? "",
+          cm,
+          since,
+          next,
+          st.label
+        ].join(","));
+      });
+      const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "generators-quick-summary.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
       const lines = [header.join(",")];
       state.generators.forEach(gen=>{
         const cm = currentMeter(gen) ?? "";
