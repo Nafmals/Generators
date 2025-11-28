@@ -1,323 +1,905 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>نظام إدارة ساعات المولدات والمصاريف - إصدار مطوّر</title>
+// ====== الحالة العامة ======
+let state = { generators: [] };
+let selectedId = null;
+const LOCAL_KEY = "generatorSystemData_v1";
+const USER_STORAGE_KEY = "generatorSystemUser_v1";
 
-  <style>
-    :root{
-      --bg:#f4f5f7;
-      --card:#ffffff;
-      --border:#e5e7eb;
-      --muted:#6b7280;
-      --primary:#111827;
-      --safe:#22c55e;
-      --soon:#f97316;
-      --due:#ef4444;
-      --radius:14px;
-    }
+// ====== مستخدمين ======
+const USERS = [
+  {username:"Sameer", password:"Sameer1234", role:"admin"},
+  {username:"Jabbar", password:"1234", role:"user"}
+];
+let currentUser = null;
 
-    *{box-sizing:border-box;font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif}
+// ====== DOM helper ======
+const $ = (id) => document.getElementById(id);
 
-    body{
-      margin:0;
-      background:var(--bg);
-      color:#111827;
-    }
+// عناصر الدخول
+const loginScreen = $("login-screen");
+const appRoot = $("app");
+const loginForm = $("login-form");
+const loginUserInput = $("login-username");
+const loginPassInput = $("login-password");
+const loginError = $("login-error");
+const currentUserLabel = $("current-user-label");
+const logoutBtn = $("logout-btn");
 
-    /* ==================== الهيدر الجديد ==================== */
+// عناصر النظام
+const genName   = $("gen-name");
+const genSmr    = $("gen-smr");
+const genDate   = $("gen-date");
+const addGenBtn = $("add-gen");
+const genList   = $("gen-list");
+const deleteGenBtn = $("delete-gen");
 
-    header{
-      position:sticky;
-      top:0;
-      z-index:20;
-      background:#fff;
-      border-bottom:1px solid var(--border);
-      padding:12px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
+const dName = $("d-name");
+const dSmr  = $("d-smr");
+const dDate = $("d-date");
+const detailNamePill = $("detail-name-pill");
 
-    .header-right{
-      display:flex;
-      align-items:center;
-      justify-content:flex-start;
-    }
+const mCurrent = $("m-current");
+const mWeekly  = $("m-weekly");
+const mSince   = $("m-since");
+const mNext    = $("m-next");
+const mPercent = $("m-percent");
+const mBar     = $("m-bar");
 
-    .brand-logo{
-      height:55px;
-      width:auto;
-      display:block;
-    }
+const rDate = $("r-date");
+const rMeter = $("r-meter");
+const addReadingBtn = $("add-reading");
+const rErr = $("r-err");
+const logBody = $("log-body");
 
-    .header-center{
-      text-align:center;
-      flex-grow:1;
-      margin-right:20px;
-      margin-left:20px;
-    }
+const repFrom = $("rep-from");
+const repTo   = $("rep-to");
+const repRefresh = $("rep-refresh");
+const repCSV  = $("rep-csv");
+const repSummaryBody = $("rep-summary-body");
+const repOverviewBody = $("rep-overview-body");
+const repExpensesBody = $("rep-expenses-body");
 
-    .header-center h1{
-      margin:0;
-      font-size:18px;
-      line-height:1.3;
-      white-space:nowrap;
-    }
+const expJSON = $("export-json");
+const impJSON = $("import-json");
+const importJSONWrapper = $("import-json-wrapper");
+const saveLocalBtn = $("save-local");
+const expCSV  = $("export-csv");
 
-    .header-center h1 span{
-      font-size:11px;
-      color:var(--muted);
-      display:block;
-    }
+// ====== صلاحيات ======
+function isAdmin(){
+  return currentUser && currentUser.role === "admin";
+}
 
-    /* ======================================================== */
+function applyRoleUI(){
+  if(!currentUser) return;
+  currentUserLabel.textContent = currentUser.username + (isAdmin() ? " (مشرف)" : "");
+  deleteGenBtn.style.display = isAdmin() ? "" : "none";
+  expJSON.style.display = isAdmin() ? "" : "none";
+  importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
+}
 
-    .header-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      justify-content:flex-end;
-      min-width:280px;
-    }
+// ====== تسجيل الدخول ======
+loginForm.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const u = loginUserInput.value.trim();
+  const p = loginPassInput.value;
+  const found = USERS.find(x=>x.username===u && x.password===p);
+  if(!found){
+    loginError.style.display = "block";
+    loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+    return;
+  }
 
-    button{
-      border-radius:999px;
-      border:1px solid var(--border);
-      padding:8px 14px;
-      background:#fff;
-      cursor:pointer;
-      font-size:13px;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-    }
-    button:hover{
-      background:#f9fafb;
-    }
-    .btn-primary{
-      background:var(--primary);
-      color:#fff;
-      border-color:var(--primary);
-    }
-    .btn-primary:hover{
-      background:#020617;
-    }
-    .btn-danger{
-      color:#b91c1c;
-      border-color:#fecaca;
-      background:#fef2f2;
-    }
+  currentUser = {username:found.username, role:found.role};
 
-    /* بقية CSS النظام الأصلي كما هو بدون تعديل */
-    .login-wrap{
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:var(--bg);
-      padding:16px;
-    }
-    .login-card{
-      background:#fff;
-      border-radius:var(--radius);
-      padding:22px 20px 20px;
-      max-width:360px;
-      width:100%;
-      border:1px solid var(--border);
-      box-shadow:0 10px 25px rgba(15,23,42,.12);
-    }
-    .login-card h2{
-      margin:0 0 4px;
-      font-size:18px;
-    }
-    .login-card p{
-      margin:0 0 14px;
-      font-size:12px;
-      color:var(--muted);
-    }
-    #login-error{
-      margin-top:8px;
-      font-size:12px;
-      color:#b91c1c;
-      display:none;
-    }
-    .logout-btn{
-      font-size:11px;
-      padding:5px 10px;
-    }
+  // تخزين المستخدم في المتصفح
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
 
-    main{
-      padding:16px 20px 40px;
-      display:grid;
-      grid-template-columns:320px minmax(0, 2.2fr) minmax(0, 1.6fr);
-      gap:16px;
-    }
+  loginError.style.display = "none";
+  loginScreen.style.display = "none";
+  appRoot.style.display = "block";
+  applyRoleUI();
+});
 
-    .card{
-      background:var(--card);
-      border-radius:var(--radius);
-      border:1px solid var(--border);
-      padding:14px 14px 16px;
-      box-shadow:0 1px 0 rgba(15,23,42,.03);
-    }
-    .card h2{
-      margin:0 0 10px;
-      font-size:15px;
-    }
-    .card h3{
-      margin:12px 0 8px;
-      font-size:14px;
-    }
+// ====== تسجيل الخروج ======
+logoutBtn.addEventListener("click", ()=>{
+  currentUser = null;
+  localStorage.removeItem(USER_STORAGE_KEY);
 
-    label{
-      font-size:12px;
-      color:#374151;
-      font-weight:600;
-    }
-    label small{
-      font-weight:400;
-      color:var(--muted);
-    }
+  appRoot.style.display = "none";
+  loginScreen.style.display = "flex";
+  loginUserInput.value = "";
+  loginPassInput.value = "";
+  currentUserLabel.textContent = "-";
+});
 
-    input, select{
-      width:100%;
-      padding:9px 10px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      font-size:13px;
-      margin-top:4px;
-      background:#fff;
-      transition:border-color .15s, box-shadow .15s;
-    }
-    input:focus, select:focus{
-      outline:none;
-      border-color:#94a3b8;
-      box-shadow:0 0 0 3px rgba(148,163,184,.28);
-    }
+// ====== util ======
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
 
-    .field{
-      display:flex;
-      flex-direction:column;
-      margin-bottom:8px;
-    }
+function byDateAsc(a,b){
+  return a.date.localeCompare(b.date);
+}
 
-    .gen-list{
-      list-style:none;
-      padding:0;
-      margin:8px 0 0;
-      max-height:420px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
+function currentMeter(gen){
+  const sorted = (gen.readings||[]).slice().sort(byDateAsc);
+  if(!sorted.length) return null;
+  return Number(sorted[sorted.length-1].meter);
+}
 
-    .gen-item{
-      border-radius:12px;
-      border:1px solid var(--border);
-      padding:8px 10px;
-      cursor:pointer;
-      background:#fff;
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .gen-item.active{
-      border-color:#4b5563;
-      box-shadow:0 0 0 2px rgba(148,163,184,.35);
-      background:#f9fafb;
-    }
-    .gen-item-header{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:6px;
-    }
-    .gen-name{
-      font-size:13px;
-      font-weight:600;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+function lastWeeklyHours(gen){
+  const sorted = (gen.readings||[]).slice().sort(byDateAsc);
+  if(sorted.length < 2) return null;
+  const last = sorted[sorted.length-1];
+  const prev = sorted[sorted.length-2];
+  return Number(last.meter) - Number(prev.meter);
+}
 
-    /* كل بقية CSS بقي كما هو من ملفك الأصلي */
+function lastServiceInfo(gen){
+  const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
+  if(hist.length){
+    const last = hist[hist.length-1];
+    return {date:last.date, meter:Number(last.meter)};
+  }
+  return {
+    date: gen.lastServiceDate || null,
+    meter: gen.lastServiceMeter != null ? Number(gen.lastServiceMeter) : 0
+  };
+}
 
-  </style>
-</head>
-<body>
+function hoursSinceService(gen){
+  const cm = currentMeter(gen);
+  if(cm == null) return 0;
+  const svc = lastServiceInfo(gen);
+  return Math.max(0, cm - (svc.meter || 0));
+}
 
-  <!-- شاشة تسجيل الدخول -->
-  <div id="login-screen" class="login-wrap">
-    <form id="login-form" class="login-card">
-      <h2>تسجيل الدخول</h2>
-      <p>أدخل اسم المستخدم وكلمة المرور للدخول للنظام.</p>
-      <div class="field">
-        <label>اسم المستخدم</label>
-        <input id="login-username" autocomplete="username" placeholder="Sameer أو Jabbar">
+function nextDueAt(gen){
+  const svc = lastServiceInfo(gen);
+  const base = svc.meter || 0;
+  return base + 200;
+}
+
+function statusObj(gen){
+  const since = hoursSinceService(gen);
+  if(since >= 200) return {label:"متأخرة", class:"status-due"};
+  if(since >= 160) return {label:"قرب الاستحقاق", class:"status-soon"};
+  return {label:"آمنة", class:"status-safe"};
+}
+
+// ====== عرض قائمة المولدات ======
+function renderGenList(){
+  genList.innerHTML = "";
+  if(!state.generators.length){
+    genList.innerHTML = "<li class='muted' style='list-style:none;padding:2px 0;'>لم يتم إضافة أي مولد بعد.</li>";
+    return;
+  }
+  state.generators.forEach(gen=>{
+    const li = document.createElement("li");
+    li.className = "gen-item" + (gen.id===selectedId ? " active" : "");
+    li.dataset.id = gen.id;
+
+    const st = statusObj(gen);
+    const cm = currentMeter(gen);
+    const since = hoursSinceService(gen);
+
+    li.innerHTML = `
+      <div class="gen-item-header">
+        <div class="gen-name" title="${gen.name}">${gen.name}</div>
+        <span class="status-pill ${st.class}">
+          <span style="width:8px;height:8px;border-radius:999px;background:currentColor;"></span>
+          ${st.label}
+        </span>
       </div>
-      <div class="field">
-        <label>كلمة المرور</label>
-        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••">
+      <div class="gen-meta">
+        <span>SMR: ${gen.lastServiceMeter ?? 0}</span>
+        <span>آخر قراءة: ${cm ?? "-"}</span>
+        <span>منذ الخدمة: ${since}</span>
       </div>
-      <button class="btn-primary" type="submit" style="width:100%;margin-top:6px;">دخول</button>
-      <div id="login-error"></div>
-      <p style="margin-top:10px;font-size:11px;color:#6b7280;">
-        حسابات افتراضية للتجربة: Sameer / Sameer1234 – Jabbar / 1234
-      </p>
-    </form>
-  </div>
+    `;
+    genList.appendChild(li);
+  });
+}
 
-  <!-- التطبيق الرئيسي -->
-  <div id="app" style="display:none;">
+// ====== عرض تفاصيل المولد ======
+function renderDetail(){
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen){
+    detailNamePill.textContent = "لا يوجد مولد محدد بعد";
+    dName.value = "";
+    dSmr.value = "";
+    dDate.value = "";
+    mCurrent.textContent = "-";
+    mWeekly.textContent  = "-";
+    mSince.textContent   = "-";
+    mNext.textContent    = "-";
+    mPercent.textContent = "0%";
+    mBar.style.width = "0%";
+    mBar.className = "progress-bar-in";
+    logBody.innerHTML = "";
+    return;
+  }
 
-    <!-- =================== الهيدر الجديد =================== -->
-    <header>
+  detailNamePill.textContent = gen.name;
+  dName.value = gen.name || "";
+  dSmr.value  = gen.lastServiceMeter != null ? gen.lastServiceMeter : "";
+  dDate.value = gen.lastServiceDate || "";
 
-      <div class="header-right">
-        <img src="Logo.jpg" alt="شعار الشركة" class="brand-logo">
-      </div>
+  const cm = currentMeter(gen);
+  const weekly = lastWeeklyHours(gen);
+  const since = hoursSinceService(gen);
+  const next  = nextDueAt(gen);
 
-      <div class="header-center">
-        <h1>
-          نظام إدارة ساعات تشغيل المولدات والمصاريف
-          <span>Nafithat Al-Amal</span>
-        </h1>
-      </div>
+  mCurrent.textContent = cm != null ? cm : "-";
+  mWeekly.textContent  = weekly != null ? weekly : "-";
+  mSince.textContent   = since;
+  mNext.textContent    = next;
 
-      <div class="header-actions">
-        <button id="export-json">تصدير JSON</button>
+  const p = Math.min(100, Math.floor((since/200)*100));
+  mPercent.textContent = p + "%";
+  mBar.style.width = p + "%";
+  mBar.className = "progress-bar-in";
+  if(since >= 200) mBar.classList.add("due");
+  else if(since >= 160) mBar.classList.add("soon");
 
-        <label id="import-json-wrapper" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
-          استيراد JSON
-          <input type="file" id="import-json" accept="application/json" style="display:none">
-        </label>
+  renderLog(gen);
+}
 
-        <button id="save-local">حفظ البيانات</button>
-        <button id="export-csv" title="ملخص CSV بسيط لجميع المولدات">ملخص CSV</button>
+// ====== سجل القراءات ======
+function renderLog(gen){
+  logBody.innerHTML = "";
+  const readings = (gen.readings||[]).slice().sort(byDateAsc);
 
-        <span class="muted">المستخدم: <strong id="current-user-label">-</strong></span>
-        <button id="logout-btn" class="logout-btn">تسجيل خروج</button>
-      </div>
+  function baselineForDate(dateStr){
+    const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
+    let base = null;
+    for(const h of hist){
+      if(h.date <= dateStr) base = h;
+      else break;
+    }
+    if(base) return Number(base.meter);
+    const baseInfo = lastServiceInfo(gen);
+    if(baseInfo.date && baseInfo.date <= dateStr) return Number(baseInfo.meter || 0);
+    return Number(baseInfo.meter || 0);
+  }
 
-    </header>
-    <!-- ================================================== -->
+  readings.forEach((r, idx)=>{
+    const svc = (gen.serviceHistory||[]).find(h=>h.date===r.date && Number(h.meter)===Number(r.meter));
+    const base = baselineForDate(r.date);
+    const since = Math.max(0, Number(r.meter) - base);
+    const next = base + 200;
+    const prev = readings[idx-1];
+    const weekly = prev ? (Number(r.meter) - Number(prev.meter)) : "";
 
-    <!-- الباقي من الكود يبقى تماما كما أرسلته أنت (نظام القراءات والمولدات) -->
-    <!-- ………………………………………………………………………………………………… -->
-    <!-- ………………………………………………………………………………………………… -->
-    <!-- الكود كامل موجود عندك أساساً ولم أحذفه حفاظاً على المساحة هنا -->
-    <!-- إذا تريد سأرسل الصفحة كاملة جدا جدا بدون اختصار -->
+    const tr = document.createElement("tr");
+    const st = since >= 200 ? "due-row" : (since>=160 ? "soon-row" : "");
+    if(st) tr.classList.add(st);
 
-  </div>
+    const costTxt = svc && svc.cost != null ? `${svc.cost} ${svc.currency || ""}` : "-";
+    const noteTxt = svc && svc.costNote ? svc.costNote : "";
 
-<script>
-/* كل سكربت JavaScript عندك سيتم وضعه هنا بدون أي تعديل */
-</script>
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.meter}</td>
+      <td>${weekly}</td>
+      <td>${since}</td>
+      <td>${next}</td>
+      <td>${svc ? "<span class='chip'>خدمة مكتملة</span>" : ""}</td>
+      <td>${costTxt}${noteTxt ? "<br><span class='muted'>"+noteTxt+"</span>" : ""}</td>
+      <td class="actions">
+        <button class="btn-small" data-action="mark" data-date="${r.date}" data-meter="${r.meter}" style="font-size:11px;padding:3px 7px;">🔧 خدمة</button>
+        <button class="btn-small" data-action="expense" data-date="${r.date}" data-meter="${r.meter}" style="font-size:11px;padding:3px 7px;">💰 مصروف</button>
+        <button class="btn-small" data-action="del" data-date="${r.date}" data-meter="${r.meter}" style="font-size:11px;padding:3px 7px;">🗑</button>
+      </td>
+    `;
+    logBody.appendChild(tr);
+  });
 
-</body>
-</html>
+  if(!readings.length){
+    logBody.innerHTML = "<tr><td colspan='8' class='muted'>لا توجد قراءات بعد لهذا المولد.</td></tr>";
+  }
+}
+
+// ====== رسائل خطأ ======
+function showError(el, msg){
+  el.textContent = msg;
+  el.style.display = "block";
+}
+function hideError(el){
+  el.style.display = "none";
+  el.textContent = "";
+}
+
+// ====== إضافة مولد ======
+addGenBtn.addEventListener("click", ()=>{
+  if(!isAdmin()){
+    alert("إضافة المولدات متاحة للمشرف فقط.");
+    return;
+  }
+  if(!genName.value.trim() || !genSmr.value || !genDate.value){
+    alert("رجاءً أكمل بيانات المولد (الاسم - العداد - التاريخ).");
+    return;
+  }
+  const g = {
+    id: crypto.randomUUID(),
+    name: genName.value.trim(),
+    lastServiceMeter: Number(genSmr.value),
+    lastServiceDate: genDate.value,
+    readings: [],
+    serviceHistory: []
+  };
+  state.generators.unshift(g);
+  selectedId = g.id;
+
+  genName.value = "";
+  genSmr.value  = "";
+  genDate.value = todayStr();
+
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+// ====== اختيار مولد ======
+genList.addEventListener("click",(e)=>{
+  const li = e.target.closest(".gen-item");
+  if(!li) return;
+  selectedId = li.dataset.id;
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+// ====== حذف مولد ======
+deleteGenBtn.addEventListener("click", ()=>{
+  if(!isAdmin()){
+    alert("حذف المولدات متاح للمشرف فقط.");
+    return;
+  }
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen){
+    alert("لا يوجد مولد محدد.");
+    return;
+  }
+  if(!confirm("هل تريد حذف هذا المولد بكل بياناته؟")) return;
+  state.generators = state.generators.filter(g=>g.id!==selectedId);
+  selectedId = state.generators[0]?.id || null;
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+// ====== تعديل من التفاصيل ======
+dName.addEventListener("change", ()=>{
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen) return;
+  gen.name = dName.value.trim();
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+dSmr.addEventListener("change", ()=>{
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen) return;
+  gen.lastServiceMeter = Number(dSmr.value||0);
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+dDate.addEventListener("change", ()=>{
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen) return;
+  gen.lastServiceDate = dDate.value;
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+// ====== إضافة قراءة ======
+addReadingBtn.addEventListener("click", ()=>{
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen){
+    showError(rErr,"رجاءً اختر مولد أولاً.");
+    return;
+  }
+  const d = rDate.value;
+  const m = Number(rMeter.value);
+  if(!d || isNaN(m)){
+    showError(rErr,"الرجاء إدخال التاريخ والعداد بشكل صحيح.");
+    return;
+  }
+  hideError(rErr);
+
+  const exists = (gen.readings||[]).some(x=>x.date===d && Number(x.meter)===m);
+  if(exists){
+    showError(rErr,"هذه القراءة موجودة بالفعل.");
+    return;
+  }
+
+  gen.readings = (gen.readings||[]).concat([{date:d, meter:m}]).sort(byDateAsc);
+  rDate.value = "";
+  rMeter.value = "";
+  renderGenList();
+  renderDetail();
+  buildReports();
+});
+
+// ====== إجراءات السجل ======
+logBody.addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-action]");
+  if(!btn) return;
+  const action = btn.dataset.action;
+  const d = btn.getAttribute("data-date");
+  const m = Number(btn.getAttribute("data-meter"));
+  const gen = state.generators.find(g=>g.id===selectedId);
+  if(!gen) return;
+
+  if(action === "del"){
+    if(!isAdmin()){
+      alert("حذف القراءة متاح للمشرف فقط.");
+      return;
+    }
+    if(!confirm("حذف هذه القراءة؟")) return;
+    gen.readings = gen.readings.filter(r=>!(r.date===d && Number(r.meter)===m));
+  }
+
+  if(action === "mark"){
+    if(!isAdmin()){
+      alert("تعيين/إلغاء الخدمة متاح للمشرف فقط.");
+      return;
+    }
+    if(!gen.serviceHistory) gen.serviceHistory = [];
+    let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
+    if(svc){
+      if(confirm("هذه القراءة مسجلة كخدمة. إلغاء الخدمة؟")){
+        gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===m));
+      }
+    } else {
+      if(confirm("تعيين هذه القراءة كخدمة مكتملة؟")){
+        gen.serviceHistory.push({date:d, meter:m});
+      }
+    }
+  }
+
+  if(action === "expense"){
+    if(!gen.serviceHistory) gen.serviceHistory = [];
+    let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
+    if(!svc){
+      if(!isAdmin()){
+        alert("لا يمكنك إنشاء خدمة جديدة. اطلب من الأدمن تسجيل الخدمة أولاً.");
+        return;
+      }
+      if(!confirm("هذه ليست خدمة بعد. تعيينها كخدمة ثم إضافة مصروف؟")) return;
+      svc = {date:d, meter:m};
+      gen.serviceHistory.push(svc);
+    }
+
+    const currentCost = svc.cost != null ? String(svc.cost) : "";
+    const currentCurrency = svc.currency || "IQD";
+    const currentNote = svc.costNote || "";
+
+    const valCost = prompt("أدخل مبلغ المصروف:", currentCost);
+    if(valCost === null) return;
+
+    const valCurrency = prompt("العملة (IQD / USD):", currentCurrency);
+    if(valCurrency === null) return;
+
+    const valNote = prompt("ملاحظة المصروف:", currentNote);
+    if(valNote === null) return;
+
+    svc.cost = valCost.trim() ? Number(valCost.trim()) : null;
+    svc.currency = valCurrency.trim().toUpperCase();
+    svc.costNote = valNote.trim();
+  }
+
+  renderDetail();
+  buildReports();
+});
+
+// ====== التقارير ======
+function parseRange(){
+  let from = repFrom.value || "0000-01-01";
+  let to   = repTo.value || "9999-12-31";
+  return {from, to};
+}
+
+function buildSummaryReport(){
+  const {from, to} = parseRange();
+  const rows = [];
+
+  state.generators.forEach(gen=>{
+    const readings = gen.readings.filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
+    let hours = 0;
+    if(readings.length>=2){
+      hours = readings[readings.length-1].meter - readings[0].meter;
+    }
+
+    let costIQD = 0;
+    let costUSD = 0;
+    const services = gen.serviceHistory.filter(s=>s.date>=from && s.date<=to);
+    services.forEach(s=>{
+      if(s.cost != null){
+        if((s.currency||"").toUpperCase()==="USD") costUSD += Number(s.cost);
+        else costIQD += Number(s.cost);
+      }
+    });
+
+    rows.push({
+      name:gen.name,
+      hours,
+      costIQD,
+      costUSD,
+      svcCount:services.length
+    });
+  });
+
+  return rows;
+}
+
+function buildOverviewReport(){
+  const {from, to} = parseRange();
+  const rows = [];
+
+  state.generators.forEach(gen=>{
+    const readings = gen.readings.filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
+    let hours = 0;
+    if(readings.length>=2){
+      hours = readings[readings.length-1].meter - readings[0].meter;
+    }
+
+    let costIQD = 0;
+    const services = gen.serviceHistory.filter(s=>s.date>=from && s.date<=to);
+    let lastServiceDate = "";
+    services.forEach(s=>{
+      if(s.cost != null){
+        if((s.currency||"").toUpperCase()==="IQD") costIQD += Number(s.cost);
+      }
+      if(!lastServiceDate || s.date > lastServiceDate){
+        lastServiceDate = s.date;
+      }
+    });
+
+    let avgPerHour = hours>0 ? costIQD / hours : 0;
+
+    rows.push({
+      name:gen.name,
+      hours,
+      costIQD,
+      svcCount:services.length,
+      avgPerHour,
+      lastServiceDate
+    });
+  });
+
+  return rows;
+}
+
+function buildExpensesReport(){
+  const {from, to} = parseRange();
+  const rows = [];
+  state.generators.forEach(gen=>{
+    gen.serviceHistory.forEach(s=>{
+      if(s.date>=from && s.date<=to && s.cost!=null){
+        rows.push({
+          gen:gen.name,
+          date:s.date,
+          meter:s.meter,
+          cost:s.cost,
+          currency:(s.currency||"").toUpperCase(),
+          note:s.costNote||""
+        });
+      }
+    });
+  });
+  rows.sort((a,b)=> a.gen.localeCompare(b.gen) || a.date.localeCompare(b.date));
+  return rows;
+}
+
+function renderSummaryReport(){
+  const rows = buildSummaryReport();
+  repSummaryBody.innerHTML = "";
+  if(!rows.length){
+    repSummaryBody.innerHTML = "<tr><td colspan='4' class='muted'>لا توجد بيانات.</td></tr>";
+    return;
+  }
+
+  let totalHours=0, totalIQD=0, totalSvc=0;
+
+  rows.forEach(r=>{
+    totalHours+=r.hours;
+    totalIQD+=r.costIQD;
+    totalSvc+=r.svcCount;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>${r.hours}</td>
+      <td>${r.costIQD}</td>
+      <td>${r.svcCount}</td>
+    `;
+    repSummaryBody.appendChild(tr);
+  });
+
+  const t = document.createElement("tr");
+  t.style.background="#f9fafb";
+  t.style.fontWeight="700";
+  t.innerHTML = `
+    <td>الإجمالي</td>
+    <td>${totalHours}</td>
+    <td>${totalIQD}</td>
+    <td>${totalSvc}</td>
+  `;
+  repSummaryBody.appendChild(t);
+}
+
+function renderOverviewReport(){
+  const rows = buildOverviewReport();
+  repOverviewBody.innerHTML = "";
+  if(!rows.length){
+    repOverviewBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد بيانات.</td></tr>";
+    return;
+  }
+
+  let totalHours=0, totalIQD=0, totalSvc=0;
+
+  rows.forEach(r=>{
+    totalHours+=r.hours;
+    totalIQD+=r.costIQD;
+    totalSvc+=r.svcCount;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>${r.hours}</td>
+      <td>${r.costIQD}</td>
+      <td>${r.svcCount}</td>
+      <td>${r.avgPerHour.toFixed(2)}</td>
+      <td>${r.lastServiceDate}</td>
+    `;
+    repOverviewBody.appendChild(tr);
+  });
+
+  const gAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
+
+  const t = document.createElement("tr");
+  t.style.background="#f9fafb";
+  t.style.fontWeight="700";
+  t.innerHTML = `
+    <td>الإجمالي</td>
+    <td>${totalHours}</td>
+    <td>${totalIQD}</td>
+    <td>${totalSvc}</td>
+    <td>${gAvg}</td>
+    <td></td>
+  `;
+  repOverviewBody.appendChild(t);
+}
+
+function renderExpensesReport(){
+  const rows = buildExpensesReport();
+  repExpensesBody.innerHTML = "";
+  if(!rows.length){
+    repExpensesBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد مصاريف.</td></tr>";
+    return;
+  }
+
+  rows.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.gen}</td>
+      <td>${r.date}</td>
+      <td>${r.meter}</td>
+      <td>${r.cost}</td>
+      <td>${r.currency}</td>
+      <td>${r.note}</td>
+    `;
+    repExpensesBody.appendChild(tr);
+  });
+}
+
+// تحديث التقارير
+function buildReports(){
+  renderSummaryReport();
+  renderOverviewReport();
+  renderExpensesReport();
+}
+
+repRefresh.addEventListener("click", ()=> buildReports());
+
+// ====== تحميل البيانات المحفوظة ======
+async function loadInitialData(){
+  try{
+    const stored = localStorage.getItem(LOCAL_KEY);
+    if(stored){
+      try{
+        const data = JSON.parse(stored);
+        if(data && Array.isArray(data.generators)){
+          state = {
+            generators: data.generators.map((g,idx)=>({
+              id: g.id || crypto.randomUUID(),
+              name: g.name || ("Generator #"+(idx+1)),
+              lastServiceMeter: Number(g.lastServiceMeter||0),
+              lastServiceDate: g.lastServiceDate || todayStr(),
+              readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
+              serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
+                date:h.date,
+                meter:Number(h.meter),
+                cost: h.cost!=null ? Number(h.cost) : null,
+                currency:h.currency||"IQD",
+                costNote:h.costNote||""
+              })) : []
+            }))
+          };
+          selectedId = state.generators[0]?.id || null;
+          renderGenList();
+          renderDetail();
+          buildReports();
+          return;
+        }
+      } catch(e){
+        console.warn("خطأ في LocalStorage");
+      }
+    }
+
+    // تحميل ملف JSON خارجي إن وجد
+    const res = await fetch("generators.json");
+    if(res.ok){
+      const data = await res.json();
+      if(data && Array.isArray(data.generators)){
+        state = {
+          generators: data.generators.map((g,idx)=>({
+            id: g.id || crypto.randomUUID(),
+            name: g.name || ("Generator #"+(idx+1)),
+            lastServiceMeter: Number(g.lastServiceMeter||0),
+            lastServiceDate: g.lastServiceDate || todayStr(),
+            readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
+            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
+              date:h.date,
+              meter:Number(h.meter),
+              cost: h.cost!=null ? Number(h.cost) : null,
+              currency:h.currency||"IQD",
+              costNote:h.costNote||""
+            })) : []
+          }))
+        };
+        selectedId = state.generators[0]?.id || null;
+        renderGenList();
+        renderDetail();
+        buildReports();
+      }
+    }
+
+  }catch(err){
+    console.error("خطأ أثناء التحميل", err);
+  }
+}
+
+// ====== حفظ محلي ======
+saveLocalBtn.addEventListener("click", ()=>{
+  try{
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    alert("تم حفظ البيانات بنجاح");
+  }catch(err){
+    alert("تعذر الحفظ!");
+  }
+});
+
+// ====== تصدير CSV مبسط ======
+expCSV.addEventListener("click", ()=>{
+  const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
+  const lines = [header.join(",")];
+
+  state.generators.forEach(gen=>{
+    const cm = currentMeter(gen) ?? "";
+    const since = hoursSinceService(gen);
+    const next  = nextDueAt(gen);
+    const st = statusObj(gen);
+    lines.push([
+      `"${gen.name.replace(/"/g,'""')}"`,
+      gen.lastServiceMeter ?? "",
+      gen.lastServiceDate ?? "",
+      cm,
+      since,
+      next,
+      st.label
+    ].join(","));
+  });
+
+  const blob = new Blob([lines.join("\n")],{type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "generators-quick-summary.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ====== تصدير JSON ======
+expJSON.addEventListener("click", ()=>{
+  if(!isAdmin()){
+    alert("للأدمن فقط");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "generator-system-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ====== استيراد JSON ======
+impJSON.addEventListener("change", (e)=>{
+  if(!isAdmin()){
+    alert("للأدمن فقط");
+    e.target.value = "";
+    return;
+  }
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(String(reader.result));
+      if(!Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
+
+      data.generators = data.generators.map((g,idx)=>({
+        id: g.id || crypto.randomUUID(),
+        name: g.name || ("Generator #"+(idx+1)),
+        lastServiceMeter: Number(g.lastServiceMeter||0),
+        lastServiceDate: g.lastServiceDate || todayStr(),
+        readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
+        serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
+          date:h.date,
+          meter:Number(h.meter),
+          cost: h.cost!=null ? Number(h.cost) : null,
+          currency:h.currency||"IQD",
+          costNote:h.costNote||""
+        })) : []
+      }));
+
+      state = data;
+      selectedId = state.generators[0]?.id || null;
+      renderGenList();
+      renderDetail();
+      buildReports();
+
+    }catch(err){
+      alert("خطأ بالاستيراد: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ====== تهيئة ======
+(function init(){
+  genDate.value = todayStr();
+  renderGenList();
+  renderDetail();
+  buildReports();
+  loadInitialData();
+})();
+
+// ====== استرجاع جلسة الدخول ======
+(function restoreUserSession(){
+  try{
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    if(!stored) return;
+
+    const parsed = JSON.parse(stored);
+    const match = USERS.find(u=>u.username===parsed.username && u.role===parsed.role);
+    if(!match) return;
+
+    currentUser = {username: match.username, role: match.role};
+
+    loginScreen.style.display = "none";
+    appRoot.style.display = "block";
+    applyRoleUI();
+
+  }catch(e){
+    console.error("خطأ في استرجاع الجلسة");
+  }
+})();
