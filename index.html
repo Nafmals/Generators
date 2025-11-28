@@ -460,13 +460,33 @@
   <!-- التطبيق الرئيسي -->
   <div id="app" style="display:none;">
 <header>
-  <div class="brand">
+  <div class="header-right">
     <img src="Logo.jpg" alt="شعار الشركة" class="brand-logo">
+  </div>
+
+  <div class="header-center">
     <h1>
       نظام إدارة ساعات تشغيل المولدات والمصاريف
       <span>Nafithat Al-Amal</span>
     </h1>
   </div>
+
+  <div class="header-actions">
+    <button id="export-json">تصدير JSON</button>
+
+    <label id="import-json-wrapper" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+      استيراد JSON
+      <input type="file" id="import-json" accept="application/json" style="display:none">
+    </label>
+
+    <button id="save-local">حفظ البيانات</button>
+    <button id="export-csv" title="ملخص CSV بسيط لجميع المولدات">ملخص CSV</button>
+
+    <span class="muted">المستخدم: <strong id="current-user-label">-</strong></span>
+    <button id="logout-btn" class="logout-btn">تسجيل خروج</button>
+  </div>
+</header>
+
 
   <div class="header-actions">
 
