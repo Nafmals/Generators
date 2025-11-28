@@ -26,6 +26,44 @@
       color:#111827;
     }
 
+    /* شاشة تسجيل الدخول */
+    .login-wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--bg);
+      padding:16px;
+    }
+    .login-card{
+      background:#fff;
+      border-radius:var(--radius);
+      padding:22px 20px 20px;
+      max-width:360px;
+      width:100%;
+      border:1px solid var(--border);
+      box-shadow:0 10px 25px rgba(15,23,42,.12);
+    }
+    .login-card h2{
+      margin:0 0 4px;
+      font-size:18px;
+    }
+    .login-card p{
+      margin:0 0 14px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    #login-error{
+      margin-top:8px;
+      font-size:12px;
+      color:#b91c1c;
+      display:none;
+    }
+    .logout-btn{
+      font-size:11px;
+      padding:5px 10px;
+    }
+
     header{
       position:sticky;
       top:0;
@@ -398,214 +436,242 @@
 </head>
 <body>
 
-  <header>
-    <h1>
-      نظام إدارة ساعات تشغيل المولدات 
-      <span>إصدار مطوّر – تصميم عصري وتقارير أوضح</span>
-    </h1>
-    <div class="header-actions">
-      <button id="export-json">تصدير JSON</button>
-
-      <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
-        استيراد JSON
-        <input type="file" id="import-json" accept="application/json" style="display:none">
-      </label>
-
-      <button id="save-local">حفظ البيانات</button>
-      <button id="export-csv" title="ملخص CSV بسيط لجميع المولدات">ملخص CSV</button>
-    </div>
-  </header>
-
-  <main>
-    <!-- لوح المولدات -->
-    <section class="card panel-left">
-      <h2>المولدات</h2>
+  <!-- شاشة تسجيل الدخول -->
+  <div id="login-screen" class="login-wrap">
+    <form id="login-form" class="login-card">
+      <h2>تسجيل الدخول</h2>
+      <p>أدخل اسم المستخدم وكلمة المرور للدخول للنظام.</p>
       <div class="field">
-        <label>اسم المولد <small>(سيظهر في القائمة)</small></label>
-        <input id="gen-name" placeholder="مثال: Perkins 250 KVA-1">
+        <label>اسم المستخدم</label>
+        <input id="login-username" autocomplete="username" placeholder="admin">
       </div>
       <div class="field">
-        <label>عداد الخدمة الأخيرة (ساعة)</label>
-        <input id="gen-smr" type="number" min="0" step="1" placeholder="مثال: 2000">
+        <label>كلمة المرور</label>
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••">
       </div>
-      <div class="field">
-        <label>تاريخ الخدمة الأخيرة</label>
-        <input id="gen-date" type="date">
+      <button class="btn-primary" type="submit" style="width:100%;margin-top:6px;">دخول</button>
+      <div id="login-error"></div>
+      <p style="margin-top:10px;font-size:11px;color:#6b7280;">
+        حسابات افتراضية:<br>
+        admin / 1234 (مشرف) – user1 / 1234 (مستخدم عادي)
+      </p>
+    </form>
+  </div>
+
+  <!-- التطبيق الرئيسي -->
+  <div id="app" style="display:none;">
+    <header>
+      <h1>
+        نظام إدارة ساعات تشغيل المولدات والمصاريف
+        <span>إصدار مطوّر – تصميم عصري وتقارير أوضح</span>
+      </h1>
+      <div class="header-actions">
+        <button id="export-json">تصدير JSON</button>
+
+        <label id="import-json-wrapper" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          استيراد JSON
+          <input type="file" id="import-json" accept="application/json" style="display:none">
+        </label>
+
+        <button id="save-local">حفظ البيانات</button>
+        <button id="export-csv" title="ملخص CSV بسيط لجميع المولدات">ملخص CSV</button>
+
+        <span class="muted">المستخدم: <strong id="current-user-label">-</strong></span>
+        <button id="logout-btn" class="logout-btn">تسجيل خروج</button>
       </div>
-      <button class="btn-primary" id="add-gen" style="width:100%;margin-top:6px;">إضافة مولد</button>
+    </header>
 
-      <div class="row" style="margin-top:10px;">
-        <span class="muted">قائمة المولدات</span>
-        <button id="delete-gen" class="btn-danger" style="font-size:11px;padding:5px 9px;">حذف المولد المحدد</button>
-      </div>
-
-      <ul id="gen-list" class="gen-list"></ul>
-    </section>
-
-    <!-- تفاصيل المولد -->
-    <section class="card panel-center">
-      <div class="row">
-        <h2 style="margin:0;">تفاصيل المولد</h2>
-        <span id="detail-name-pill" class="pill">لا يوجد مولد محدد بعد</span>
-      </div>
-
-      <div class="detail-grid">
+    <main>
+      <!-- لوح المولدات -->
+      <section class="card panel-left">
+        <h2>المولدات</h2>
         <div class="field">
-          <label>اسم المولد</label>
-          <input id="d-name" placeholder="اسم المولد">
+          <label>اسم المولد <small>(سيظهر في القائمة)</small></label>
+          <input id="gen-name" placeholder="مثال: Perkins 250 KVA-1">
         </div>
         <div class="field">
-          <label>عداد الخدمة الأخيرة (SMR)</label>
-          <input id="d-smr" type="number" min="0" step="1">
+          <label>عداد الخدمة الأخيرة (ساعة)</label>
+          <input id="gen-smr" type="number" min="0" step="1" placeholder="مثال: 2000">
         </div>
         <div class="field">
           <label>تاريخ الخدمة الأخيرة</label>
-          <input id="d-date" type="date">
+          <input id="gen-date" type="date">
         </div>
-      </div>
+        <button class="btn-primary" id="add-gen" style="width:100%;margin-top:6px;">إضافة مولد</button>
 
-      <div class="metrics">
-        <div class="metric">
-          <div class="metric-label">آخر قراءة عداد</div>
-          <div class="metric-value" id="m-current">-</div>
+        <div class="row" style="margin-top:10px;">
+          <span class="muted">قائمة المولدات</span>
+          <button id="delete-gen" class="btn-danger" style="font-size:11px;padding:5px 9px;">حذف المولد المحدد</button>
         </div>
-        <div class="metric">
-          <div class="metric-label">ساعات آخر فترة</div>
-          <div class="metric-value" id="m-weekly">-</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">ساعات منذ آخر خدمة</div>
-          <div class="metric-value" id="m-since">-</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">الاستحقاق التالي (ساعة)</div>
-          <div class="metric-value" id="m-next">-</div>
-        </div>
-      </div>
 
-      <div class="progress-wrap">
-        <div class="progress-label">
-          <span>نسبة استهلاك دورة الـ 200 ساعة</span>
-          <span id="m-percent" class="muted">0%</span>
-        </div>
-        <div class="progress-bar-out">
-          <div id="m-bar" class="progress-bar-in"></div>
-        </div>
-      </div>
+        <ul id="gen-list" class="gen-list"></ul>
+      </section>
 
-      <h3>إضافة قراءة عداد</h3>
-      <div class="add-reading-grid">
-        <div class="field">
-          <label>التاريخ</label>
-          <input id="r-date" type="date">
+      <!-- تفاصيل المولد -->
+      <section class="card panel-center">
+        <div class="row">
+          <h2 style="margin:0;">تفاصيل المولد</h2>
+          <span id="detail-name-pill" class="pill">لا يوجد مولد محدد بعد</span>
         </div>
-        <div class="field">
-          <label>قراءة العداد</label>
-          <input id="r-meter" type="number" min="0" step="1">
-        </div>
-        <div class="field">
-          <button class="btn-primary" id="add-reading">إضافة القراءة</button>
-        </div>
-      </div>
-      <div id="r-err" class="err" style="display:none;"></div>
 
-      <h3 style="margin-top:14px;">سجل القراءات / الصيانة</h3>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>التاريخ</th>
-              <th>العداد</th>
-              <th>ساعات هذه الفترة</th>
-              <th>منذ الخدمة</th>
-              <th>الاستحقاق التالي</th>
-              <th>حالة</th>
-              <th>مصروف الخدمة</th>
-              <th>إجراءات</th>
-            </tr>
-          </thead>
-          <tbody id="log-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- التقارير -->
-    <section class="card panel-right">
-      <div class="tab-header">
-        <button class="tab-btn active" data-tab="summary">ملخص</button>
-        <button class="tab-btn" data-tab="overview">شامل</button>
-        <button class="tab-btn" data-tab="expenses">مصاريف</button>
-      </div>
-
-      <div class="filters">
-        <div class="field">
-          <label>من تاريخ</label>
-          <input type="date" id="rep-from">
+        <div class="detail-grid">
+          <div class="field">
+            <label>اسم المولد</label>
+            <input id="d-name" placeholder="اسم المولد">
+          </div>
+          <div class="field">
+            <label>عداد الخدمة الأخيرة (SMR)</label>
+            <input id="d-smr" type="number" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>تاريخ الخدمة الأخيرة</label>
+            <input id="d-date" type="date">
+          </div>
         </div>
-        <div class="field">
-          <label>إلى تاريخ</label>
-          <input type="date" id="rep-to">
-        </div>
-        <button id="rep-refresh">تحديث التقرير</button>
-        <button id="rep-csv">تصدير CSV</button>
-      </div>
 
-      <div id="rep-summary" class="report-tab">
-        <p class="muted" style="margin:0 0 6px;">ملخص تشغيل ومصاريف حسب المولد للفترة المحددة.</p>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">آخر قراءة عداد</div>
+            <div class="metric-value" id="m-current">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">ساعات آخر فترة</div>
+            <div class="metric-value" id="m-weekly">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">ساعات منذ آخر خدمة</div>
+            <div class="metric-value" id="m-since">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">الاستحقاق التالي (ساعة)</div>
+            <div class="metric-value" id="m-next">-</div>
+          </div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>نسبة استهلاك دورة الـ 200 ساعة</span>
+            <span id="m-percent" class="muted">0%</span>
+          </div>
+          <div class="progress-bar-out">
+            <div id="m-bar" class="progress-bar-in"></div>
+          </div>
+        </div>
+
+        <h3>إضافة قراءة عداد</h3>
+        <div class="add-reading-grid">
+          <div class="field">
+            <label>التاريخ</label>
+            <input id="r-date" type="date">
+          </div>
+          <div class="field">
+            <label>قراءة العداد</label>
+            <input id="r-meter" type="number" min="0" step="1">
+          </div>
+          <div class="field">
+            <button class="btn-primary" id="add-reading">إضافة القراءة</button>
+          </div>
+        </div>
+        <div id="r-err" class="err" style="display:none;"></div>
+
+        <h3 style="margin-top:14px;">سجل القراءات / الصيانة</h3>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>المولد</th>
-                <th>إجمالي ساعات التشغيل</th>
-                <th>إجمالي المصاريف (IQD)</th>
-                <th>عدد خدمات الصيانة</th>
+                <th>التاريخ</th>
+                <th>العداد</th>
+                <th>ساعات هذه الفترة</th>
+                <th>منذ الخدمة</th>
+                <th>الاستحقاق التالي</th>
+                <th>حالة</th>
+                <th>مصروف الخدمة</th>
+                <th>إجراءات</th>
               </tr>
             </thead>
-            <tbody id="rep-summary-body"></tbody>
+            <tbody id="log-body"></tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div id="rep-overview" class="report-tab" style="display:none;">
-        <p class="muted" style="margin:0 0 6px;">تقرير شامل لكل مولد: تشغيل + مصاريف + مؤشرات إضافية للفترة المحددة.</p>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>المولد</th>
-                <th>إجمالي ساعات التشغيل</th>
-                <th>إجمالي المصاريف (IQD)</th>
-                <th>عدد خدمات الصيانة</th>
-                <th>معدل الكلفة لكل ساعة</th>
-                <th>آخر تاريخ صيانة</th>
-              </tr>
-            </thead>
-            <tbody id="rep-overview-body"></tbody>
-          </table>
+      <!-- التقارير -->
+      <section class="card panel-right">
+        <div class="tab-header">
+          <button class="tab-btn active" data-tab="summary">ملخص</button>
+          <button class="tab-btn" data-tab="overview">شامل</button>
+          <button class="tab-btn" data-tab="expenses">مصاريف</button>
         </div>
-      </div>
 
-      <div id="rep-expenses" class="report-tab" style="display:none;">
-        <p class="muted" style="margin:0 0 6px;">تفصيل جميع المصاريف على مستوى المولد والخدمة.</p>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>المولد</th>
-                <th>تاريخ الخدمة</th>
-                <th>قراءة العداد</th>
-                <th>المبلغ</th>
-                <th>العملة</th>
-                <th>ملاحظة</th>
-              </tr>
-            </thead>
-            <tbody id="rep-expenses-body"></tbody>
-          </table>
+        <div class="filters">
+          <div class="field">
+            <label>من تاريخ</label>
+            <input type="date" id="rep-from">
+          </div>
+          <div class="field">
+            <label>إلى تاريخ</label>
+            <input type="date" id="rep-to">
+          </div>
+          <button id="rep-refresh">تحديث التقرير</button>
+          <button id="rep-csv">تصدير CSV</button>
         </div>
-      </div>
-    </section>
-  </main>
+
+        <div id="rep-summary" class="report-tab">
+          <p class="muted" style="margin:0 0 6px;">ملخص تشغيل ومصاريف حسب المولد للفترة المحددة.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>المولد</th>
+                  <th>إجمالي ساعات التشغيل</th>
+                  <th>إجمالي المصاريف (IQD)</th>
+                  <th>عدد خدمات الصيانة</th>
+                </tr>
+              </thead>
+              <tbody id="rep-summary-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="rep-overview" class="report-tab" style="display:none;">
+          <p class="muted" style="margin:0 0 6px;">تقرير شامل لكل مولد: تشغيل + مصاريف + مؤشرات إضافية للفترة المحددة.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>المولد</th>
+                  <th>إجمالي ساعات التشغيل</th>
+                  <th>إجمالي المصاريف (IQD)</th>
+                  <th>عدد خدمات الصيانة</th>
+                  <th>معدل الكلفة لكل ساعة</th>
+                  <th>آخر تاريخ صيانة</th>
+                </tr>
+              </thead>
+              <tbody id="rep-overview-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="rep-expenses" class="report-tab" style="display:none;">
+          <p class="muted" style="margin:0 0 6px;">تفصيل جميع المصاريف على مستوى المولد والخدمة.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>المولد</th>
+                  <th>تاريخ الخدمة</th>
+                  <th>قراءة العداد</th>
+                  <th>المبلغ</th>
+                  <th>العملة</th>
+                  <th>ملاحظة</th>
+                </tr>
+              </thead>
+              <tbody id="rep-expenses-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
     // ====== الحالة العامة ======
@@ -613,9 +679,27 @@
     let selectedId = null;
     const LOCAL_KEY = "generatorSystemData_v1";
 
+    // ====== مستخدمين (عدّل هذه حسب الحاجة) ======
+    const USERS = [
+      {username:"admin", password:"1234", role:"admin"},
+      {username:"user1", password:"1234", role:"user"}
+    ];
+    let currentUser = null;
+
     // ====== DOM helper ======
     const $ = (id) => document.getElementById(id);
 
+    // عناصر الدخول
+    const loginScreen = $("login-screen");
+    const appRoot = $("app");
+    const loginForm = $("login-form");
+    const loginUserInput = $("login-username");
+    const loginPassInput = $("login-password");
+    const loginError = $("login-error");
+    const currentUserLabel = $("current-user-label");
+    const logoutBtn = $("logout-btn");
+
+    // عناصر النظام
     const genName   = $("gen-name");
     const genSmr    = $("gen-smr");
     const genDate   = $("gen-date");
@@ -651,8 +735,52 @@
 
     const expJSON = $("export-json");
     const impJSON = $("import-json");
+    const importJSONWrapper = $("import-json-wrapper");
     const saveLocalBtn = $("save-local");
     const expCSV  = $("export-csv");
+
+    // ====== صلاحيات ======
+    function isAdmin(){
+      return currentUser && currentUser.role === "admin";
+    }
+
+    function applyRoleUI(){
+      if(!currentUser) return;
+      currentUserLabel.textContent = currentUser.username + (isAdmin() ? " (مشرف)" : "");
+
+      // أزرار خاصة بالأدمن
+      deleteGenBtn.style.display = isAdmin() ? "" : "none";
+      expJSON.style.display = isAdmin() ? "" : "none";
+      importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
+    }
+
+    // تسجيل الدخول
+    loginForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const u = loginUserInput.value.trim();
+      const p = loginPassInput.value;
+      const found = USERS.find(x=>x.username===u && x.password===p);
+      if(!found){
+        loginError.style.display = "block";
+        loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+        return;
+      }
+      currentUser = {username:found.username, role:found.role};
+      loginError.style.display = "none";
+      loginScreen.style.display = "none";
+      appRoot.style.display = "block";
+      applyRoleUI();
+    });
+
+    // تسجيل الخروج
+    logoutBtn.addEventListener("click", ()=>{
+      currentUser = null;
+      appRoot.style.display = "none";
+      loginScreen.style.display = "flex";
+      loginUserInput.value = "";
+      loginPassInput.value = "";
+      currentUserLabel.textContent = "-";
+    });
 
     // ====== util ======
     function todayStr(){
@@ -852,8 +980,12 @@
       el.textContent = "";
     }
 
-    // ====== إضافة مولد ======
+    // ====== إضافة مولد (أدمن فقط) ======
     addGenBtn.addEventListener("click", ()=>{
+      if(!isAdmin()){
+        alert("إضافة المولدات متاحة للمشرف فقط.");
+        return;
+      }
       if(!genName.value.trim() || !genSmr.value || !genDate.value){
         alert("رجاءً أكمل بيانات المولد (الاسم - العداد - التاريخ).");
         return;
@@ -888,8 +1020,12 @@
       buildReports();
     });
 
-    // ====== حذف مولد ======
+    // ====== حذف مولد (أدمن فقط) ======
     deleteGenBtn.addEventListener("click", ()=>{
+      if(!isAdmin()){
+        alert("حذف المولدات متاح للمشرف فقط.");
+        return;
+      }
       const gen = state.generators.find(g=>g.id===selectedId);
       if(!gen){
         alert("لا يوجد مولد محدد.");
@@ -969,11 +1105,19 @@
       if(!gen) return;
 
       if(action === "del"){
+        if(!isAdmin()){
+          alert("حذف القراءة متاح للمشرف فقط.");
+          return;
+        }
         if(!confirm("حذف هذه القراءة؟")) return;
         gen.readings = (gen.readings||[]).filter(r=>!(r.date===d && Number(r.meter)===m));
       }
 
       if(action === "mark"){
+        if(!isAdmin()){
+          alert("تعيين/إلغاء الخدمة متاح للمشرف فقط.");
+          return;
+        }
         if(!gen.serviceHistory) gen.serviceHistory = [];
         let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
         if(svc){
@@ -988,9 +1132,14 @@
       }
 
       if(action === "expense"){
+        // السماح لغير الأدمن بإضافة مصروف إذا الخدمة موجودة
         if(!gen.serviceHistory) gen.serviceHistory = [];
         let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
         if(!svc){
+          if(!isAdmin()){
+            alert("لا يمكنك إنشاء خدمة جديدة، اطلب من الأدمن تسجيل الخدمة أولاً.");
+            return;
+          }
           if(!confirm("لم تُسجّل هذه القراءة كخدمة بعد. تعيينها كخدمة ثم إضافة مصروف؟")) return;
           svc = {date:d, meter:m};
           gen.serviceHistory.push(svc);
@@ -1293,7 +1442,7 @@
             r.costIQD,
             r.svcCount,
             r.avgPerHour ? r.avgPerHour.toFixed(2) : 0,
-            `"${String(r.lastServiceDate||"").replace(/"/g,'""')}"`
+            `"${String(r.lastServiceDate||"").replace(/"/g,'""')}"`,
           ].join(","));
         });
 
@@ -1350,8 +1499,12 @@
       });
     });
 
-    // ====== تصدير / استيراد JSON ======
+    // ====== تصدير / استيراد JSON (أدمن فقط في الاستيراد) ======
     expJSON.addEventListener("click", ()=>{
+      if(!isAdmin()){
+        alert("تصدير JSON متاح للمشرف فقط.");
+        return;
+      }
       const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1361,174 +1514,6 @@
       URL.revokeObjectURL(url);
     });
 
-    impJSON.addEventListener("change", (e)=>{
-      const file = e.target.files?.[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
-          const data = JSON.parse(String(reader.result));
-          if(!data || !Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
-          data.generators = data.generators.map((g,idx)=>({
-            id: g.id || crypto.randomUUID(),
-            name: g.name || ("Generator #"+(idx+1)),
-            lastServiceMeter: Number(g.lastServiceMeter||0),
-            lastServiceDate: g.lastServiceDate || todayStr(),
-            readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
-            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
-              date:h.date,
-              meter:Number(h.meter),
-              cost: h.cost != null ? Number(h.cost) : null,
-              currency: h.currency || "IQD",
-              costNote: h.costNote || ""
-            })) : []
-          }));
-          state = data;
-          selectedId = state.generators[0]?.id || null;
-          renderGenList();
-          renderDetail();
-          buildReports();
-        }catch(err){
-          alert("تعذر استيراد الملف: " + (err.message||err));
-        }
-      };
-      reader.readAsText(file);
-    });
+    impJ
 
-    // ====== حفظ البيانات محلياً في المتصفح ======
-    saveLocalBtn.addEventListener("click", ()=>{
-      try{
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-        alert("تم حفظ البيانات على هذا الجهاز بنجاح ✅");
-      }catch(err){
-        console.error("LocalStorage error", err);
-        alert("تعذر حفظ البيانات محلياً (ربما مساحة التخزين ممتلئة).");
-      }
-    });
-
-    // ====== ملخص CSV بسيط من الهيدر ======
-    expCSV.addEventListener("click", ()=>{
-      const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
-      const lines = [header.join(",")];
-      state.generators.forEach(gen=>{
-        const cm = currentMeter(gen) ?? "";
-        const since = hoursSinceService(gen);
-        const next  = nextDueAt(gen);
-        const st = statusObj(gen);
-        lines.push([
-          `"${(gen.name||"").replace(/"/g,'""')}"`,
-          gen.lastServiceMeter ?? "",
-          gen.lastServiceDate ?? "",
-          cm,
-          since,
-          next,
-          st.label
-        ].join(","));
-      });
-      const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "generators-quick-summary.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    // ====== تحميل البيانات من LocalStorage أو من generators.json ======
-    async function loadInitialData(){
-      try {
-        const stored = localStorage.getItem(LOCAL_KEY);
-        if (stored) {
-          try {
-            const data = JSON.parse(stored);
-            if (data && Array.isArray(data.generators)) {
-              state = {
-                generators: data.generators.map((g, idx) => ({
-                  id: g.id || crypto.randomUUID(),
-                  name: g.name || ("Generator #" + (idx + 1)),
-                  lastServiceMeter: Number(g.lastServiceMeter || 0),
-                  lastServiceDate: g.lastServiceDate || todayStr(),
-                  readings: Array.isArray(g.readings) ? g.readings.map(r => ({
-                    date: r.date,
-                    meter: Number(r.meter)
-                  })) : [],
-                  serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
-                    date: h.date,
-                    meter: Number(h.meter),
-                    cost: h.cost != null ? Number(h.cost) : null,
-                    currency: h.currency || "IQD",
-                    costNote: h.costNote || ""
-                  })) : []
-                }))
-              };
-              selectedId = state.generators[0]?.id || null;
-              renderGenList();
-              renderDetail();
-              buildReports();
-              console.log("Loaded data from localStorage");
-              return;
-            }
-          } catch(e){
-            console.warn("تعذر قراءة البيانات من التخزين المحلي، سيتم استخدام ملف JSON", e);
-          }
-        }
-
-        const res = await fetch("generators.json");
-        if (!res.ok) {
-          console.warn("لم يتم العثور على ملف generators.json");
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!data || !Array.isArray(data.generators)) {
-          console.warn("صيغة ملف JSON غير صحيحة");
-          return;
-        }
-
-        state = {
-          generators: data.generators.map((g, idx) => ({
-            id: g.id || crypto.randomUUID(),
-            name: g.name || ("Generator #" + (idx + 1)),
-            lastServiceMeter: Number(g.lastServiceMeter || 0),
-            lastServiceDate: g.lastServiceDate || todayStr(),
-            readings: Array.isArray(g.readings) ? g.readings.map(r => ({
-              date: r.date,
-              meter: Number(r.meter)
-            })) : [],
-            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
-              date: h.date,
-              meter: Number(h.meter),
-              cost: h.cost != null ? Number(h.cost) : null,
-              currency: h.currency || "IQD",
-              costNote: h.costNote || ""
-            })) : []
-          }))
-        };
-
-        selectedId = state.generators[0]?.id || null;
-        renderGenList();
-        renderDetail();
-        buildReports();
-        console.log("Loaded data from generators.json");
-      } catch (err) {
-        console.error("خطأ أثناء تحميل البيانات", err);
-      }
-    }
-
-    // ====== تهيئة أولية ======
-    (function init(){
-      genDate.value = todayStr();
-      repFrom.value = "";
-      repTo.value   = "";
-
-      renderGenList();
-      renderDetail();
-      buildReports();
-
-      loadInitialData();
-    })();
-  </script>
-</body>
-</html>
-```
+  
