@@ -443,7 +443,7 @@
       <p>أدخل اسم المستخدم وكلمة المرور للدخول للنظام.</p>
       <div class="field">
         <label>اسم المستخدم</label>
-        <input id="login-username" autocomplete="username" placeholder="admin">
+        <input id="login-username" autocomplete="username" placeholder="Sameer أو Jabbar">
       </div>
       <div class="field">
         <label>كلمة المرور</label>
@@ -452,7 +452,7 @@
       <button class="btn-primary" type="submit" style="width:100%;margin-top:6px;">دخول</button>
       <div id="login-error"></div>
       <p style="margin-top:10px;font-size:11px;color:#6b7280;">
-        حسابات افتراضية للتجربة: admin / 1234 – user1 / 1234
+        حسابات افتراضية للتجربة: Sameer / Sameer1234 – Jabbar / 1234
       </p>
     </form>
   </div>
@@ -678,6 +678,9 @@
     let selectedId = null;
     const LOCAL_KEY = "generatorSystemData_v1";
 
+    // 🔧 مفتاح تخزين جلسة المستخدم في المتصفح
+    const USER_STORAGE_KEY = "generatorSystemUser_v1";
+
     // ====== مستخدمين ======
     const USERS = [
       {username:"Sameer", password:"Sameer1234", role:"admin"},
@@ -751,41 +754,41 @@
       importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
     }
 
-  loginForm.addEventListener("submit", (e)=>{
-  e.preventDefault();
-  const u = loginUserInput.value.trim();
-  const p = loginPassInput.value;
-  const found = USERS.find(x=>x.username===u && x.password===p);
-  if(!found){
-    loginError.style.display = "block";
-    loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
-    return;
-  }
+    // ====== تسجيل الدخول ======
+    loginForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const u = loginUserInput.value.trim();
+      const p = loginPassInput.value;
+      const found = USERS.find(x=>x.username===u && x.password===p);
+      if(!found){
+        loginError.style.display = "block";
+        loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+        return;
+      }
 
-  currentUser = {username:found.username, role:found.role};
+      currentUser = {username:found.username, role:found.role};
 
-  // 👉 تخزين المستخدم في المتصفح حتى بعد الريفريش
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
+      // تخزين المستخدم في المتصفح حتى بعد الريفريش
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
 
-  loginError.style.display = "none";
-  loginScreen.style.display = "none";
-  appRoot.style.display = "block";
-  applyRoleUI();
-});
+      loginError.style.display = "none";
+      loginScreen.style.display = "none";
+      appRoot.style.display = "block";
+      applyRoleUI();
+    });
 
+    // ====== تسجيل الخروج ======
+    logoutBtn.addEventListener("click", ()=>{
+      currentUser = null;
+      // إزالة المستخدم من التخزين
+      localStorage.removeItem(USER_STORAGE_KEY);
 
-  logoutBtn.addEventListener("click", ()=>{
-  currentUser = null;
-  // 👉 إزالة المستخدم من التخزين
-  localStorage.removeItem(USER_STORAGE_KEY);
-
-  appRoot.style.display = "none";
-  loginScreen.style.display = "flex";
-  loginUserInput.value = "";
-  loginPassInput.value = "";
-  currentUserLabel.textContent = "-";
-});
-
+      appRoot.style.display = "none";
+      loginScreen.style.display = "flex";
+      loginUserInput.value = "";
+      loginPassInput.value = "";
+      currentUserLabel.textContent = "-";
+    });
 
     // ====== util ======
     function todayStr(){
@@ -1688,32 +1691,33 @@
       buildReports();
       loadInitialData();
     })();
+
     // ====== استرجاع جلسة المستخدم بعد الريفريش ======
-(function restoreUserSession(){
-  try{
-    const stored = localStorage.getItem(USER_STORAGE_KEY);
-    if(!stored) return;
+    (function restoreUserSession(){
+      try{
+        const stored = localStorage.getItem(USER_STORAGE_KEY);
+        if(!stored) return;
 
-    const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
 
-    // نتأكد أن المستخدم ما زال موجوداً في قائمة USERS
-    const match = USERS.find(u => u.username === parsed.username && u.role === parsed.role);
-    if(!match) return;
+        // نتأكد أن المستخدم ما زال موجوداً في قائمة USERS
+        const match = USERS.find(u => u.username === parsed.username && u.role === parsed.role);
+        if(!match) return;
 
-    // تسجيل الدخول تلقائياً
-    currentUser = {username: match.username, role: match.role};
+        // تسجيل الدخول تلقائياً
+        currentUser = {username: match.username, role: match.role};
 
-    // إظهار التطبيق وإخفاء شاشة الدخول
-    loginScreen.style.display = "none";
-    appRoot.style.display = "block";
+        // إظهار التطبيق وإخفاء شاشة الدخول
+        loginScreen.style.display = "none";
+        appRoot.style.display = "block";
 
-    // تفعيل واجهة الصلاحيات
-    applyRoleUI();
+        // تفعيل واجهة الصلاحيات
+        applyRoleUI();
 
-  }catch(e){
-    console.error("خطأ في استرجاع جلسة المستخدم", e);
-  }
-})();
+      }catch(e){
+        console.error("خطأ في استرجاع جلسة المستخدم", e);
+      }
+    })();
 
   </script>
 </body>
