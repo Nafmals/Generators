@@ -1,30 +1,12 @@
 // ====== الحالة العامة ======
-let state = { generators: [] };
+let state = {
+  generators: []
+};
 let selectedId = null;
-const LOCAL_KEY = "generatorSystemData_v1";
-const USER_STORAGE_KEY = "generatorSystemUser_v1";
-
-// ====== مستخدمين ======
-const USERS = [
-  {username:"Sameer", password:"Sameer1234", role:"admin"},
-  {username:"Jabbar", password:"1234", role:"user"}
-];
-let currentUser = null;
 
 // ====== DOM helper ======
-const $ = (id) => document.getElementById(id);
+const $ = (id)=>document.getElementById(id);
 
-// عناصر الدخول
-const loginScreen = $("login-screen");
-const appRoot = $("app");
-const loginForm = $("login-form");
-const loginUserInput = $("login-username");
-const loginPassInput = $("login-password");
-const loginError = $("login-error");
-const currentUserLabel = $("current-user-label");
-const logoutBtn = $("logout-btn");
-
-// عناصر النظام
 const genName   = $("gen-name");
 const genSmr    = $("gen-smr");
 const genDate   = $("gen-date");
@@ -60,57 +42,7 @@ const repExpensesBody = $("rep-expenses-body");
 
 const expJSON = $("export-json");
 const impJSON = $("import-json");
-const importJSONWrapper = $("import-json-wrapper");
-const saveLocalBtn = $("save-local");
 const expCSV  = $("export-csv");
-
-// ====== صلاحيات ======
-function isAdmin(){
-  return currentUser && currentUser.role === "admin";
-}
-
-function applyRoleUI(){
-  if(!currentUser) return;
-  currentUserLabel.textContent = currentUser.username + (isAdmin() ? " (مشرف)" : "");
-  deleteGenBtn.style.display = isAdmin() ? "" : "none";
-  expJSON.style.display = isAdmin() ? "" : "none";
-  importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
-}
-
-// ====== تسجيل الدخول ======
-loginForm.addEventListener("submit", (e)=>{
-  e.preventDefault();
-  const u = loginUserInput.value.trim();
-  const p = loginPassInput.value;
-  const found = USERS.find(x=>x.username===u && x.password===p);
-  if(!found){
-    loginError.style.display = "block";
-    loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
-    return;
-  }
-
-  currentUser = {username:found.username, role:found.role};
-
-  // تخزين المستخدم في المتصفح
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
-
-  loginError.style.display = "none";
-  loginScreen.style.display = "none";
-  appRoot.style.display = "block";
-  applyRoleUI();
-});
-
-// ====== تسجيل الخروج ======
-logoutBtn.addEventListener("click", ()=>{
-  currentUser = null;
-  localStorage.removeItem(USER_STORAGE_KEY);
-
-  appRoot.style.display = "none";
-  loginScreen.style.display = "flex";
-  loginUserInput.value = "";
-  loginPassInput.value = "";
-  currentUserLabel.textContent = "-";
-});
 
 // ====== util ======
 function todayStr(){
@@ -250,6 +182,7 @@ function renderLog(gen){
   logBody.innerHTML = "";
   const readings = (gen.readings||[]).slice().sort(byDateAsc);
 
+  // baseline لكل قراءة
   function baselineForDate(dateStr){
     const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
     let base = null;
@@ -300,7 +233,7 @@ function renderLog(gen){
   }
 }
 
-// ====== رسائل خطأ ======
+// ====== رسائل خطأ بسيطة ======
 function showError(el, msg){
   el.textContent = msg;
   el.style.display = "block";
@@ -312,10 +245,6 @@ function hideError(el){
 
 // ====== إضافة مولد ======
 addGenBtn.addEventListener("click", ()=>{
-  if(!isAdmin()){
-    alert("إضافة المولدات متاحة للمشرف فقط.");
-    return;
-  }
   if(!genName.value.trim() || !genSmr.value || !genDate.value){
     alert("رجاءً أكمل بيانات المولد (الاسم - العداد - التاريخ).");
     return;
@@ -340,7 +269,7 @@ addGenBtn.addEventListener("click", ()=>{
   buildReports();
 });
 
-// ====== اختيار مولد ======
+// ====== اختيار مولد من القائمة ======
 genList.addEventListener("click",(e)=>{
   const li = e.target.closest(".gen-item");
   if(!li) return;
@@ -352,16 +281,12 @@ genList.addEventListener("click",(e)=>{
 
 // ====== حذف مولد ======
 deleteGenBtn.addEventListener("click", ()=>{
-  if(!isAdmin()){
-    alert("حذف المولدات متاح للمشرف فقط.");
-    return;
-  }
   const gen = state.generators.find(g=>g.id===selectedId);
   if(!gen){
     alert("لا يوجد مولد محدد.");
     return;
   }
-  if(!confirm("هل تريد حذف هذا المولد بكل بياناته؟")) return;
+  if(!confirm("هل تريد حذف هذا المولد بكل بياناته بالتأكيد؟")) return;
   state.generators = state.generators.filter(g=>g.id!==selectedId);
   selectedId = state.generators[0]?.id || null;
   renderGenList();
@@ -369,7 +294,7 @@ deleteGenBtn.addEventListener("click", ()=>{
   buildReports();
 });
 
-// ====== تعديل من التفاصيل ======
+// ====== تعديل بيانات المولد من التفاصيل ======
 dName.addEventListener("change", ()=>{
   const gen = state.generators.find(g=>g.id===selectedId);
   if(!gen) return;
@@ -378,7 +303,6 @@ dName.addEventListener("change", ()=>{
   renderDetail();
   buildReports();
 });
-
 dSmr.addEventListener("change", ()=>{
   const gen = state.generators.find(g=>g.id===selectedId);
   if(!gen) return;
@@ -387,7 +311,6 @@ dSmr.addEventListener("change", ()=>{
   renderDetail();
   buildReports();
 });
-
 dDate.addEventListener("change", ()=>{
   const gen = state.generators.find(g=>g.id===selectedId);
   if(!gen) return;
@@ -412,6 +335,7 @@ addReadingBtn.addEventListener("click", ()=>{
   }
   hideError(rErr);
 
+  // منع تكرار نفس التاريخ+العداد
   const exists = (gen.readings||[]).some(x=>x.date===d && Number(x.meter)===m);
   if(exists){
     showError(rErr,"هذه القراءة موجودة بالفعل.");
@@ -426,7 +350,7 @@ addReadingBtn.addEventListener("click", ()=>{
   buildReports();
 });
 
-// ====== إجراءات السجل ======
+// ====== إجراءات على السجل (خدمة / مصروف / حذف) ======
 logBody.addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-action]");
   if(!btn) return;
@@ -437,23 +361,15 @@ logBody.addEventListener("click", (e)=>{
   if(!gen) return;
 
   if(action === "del"){
-    if(!isAdmin()){
-      alert("حذف القراءة متاح للمشرف فقط.");
-      return;
-    }
     if(!confirm("حذف هذه القراءة؟")) return;
-    gen.readings = gen.readings.filter(r=>!(r.date===d && Number(r.meter)===m));
+    gen.readings = (gen.readings||[]).filter(r=>!(r.date===d && Number(r.meter)===m));
   }
 
   if(action === "mark"){
-    if(!isAdmin()){
-      alert("تعيين/إلغاء الخدمة متاح للمشرف فقط.");
-      return;
-    }
     if(!gen.serviceHistory) gen.serviceHistory = [];
     let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
     if(svc){
-      if(confirm("هذه القراءة مسجلة كخدمة. إلغاء الخدمة؟")){
+      if(confirm("هذه القراءة مسجلة كخدمة. هل تريد إلغاء إشارة الخدمة؟")){
         gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===m));
       }
     } else {
@@ -467,11 +383,7 @@ logBody.addEventListener("click", (e)=>{
     if(!gen.serviceHistory) gen.serviceHistory = [];
     let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
     if(!svc){
-      if(!isAdmin()){
-        alert("لا يمكنك إنشاء خدمة جديدة. اطلب من الأدمن تسجيل الخدمة أولاً.");
-        return;
-      }
-      if(!confirm("هذه ليست خدمة بعد. تعيينها كخدمة ثم إضافة مصروف؟")) return;
+      if(!confirm("لم تُسجّل هذه القراءة كخدمة بعد. تعيينها كخدمة ثم إضافة مصروف؟")) return;
       svc = {date:d, meter:m};
       gen.serviceHistory.push(svc);
     }
@@ -480,13 +392,11 @@ logBody.addEventListener("click", (e)=>{
     const currentCurrency = svc.currency || "IQD";
     const currentNote = svc.costNote || "";
 
-    const valCost = prompt("أدخل مبلغ المصروف:", currentCost);
+    const valCost = prompt("أدخل مبلغ المصروف (يمكن تركه فارغًا):", currentCost);
     if(valCost === null) return;
-
-    const valCurrency = prompt("العملة (IQD / USD):", currentCurrency);
+    const valCurrency = prompt("أدخل العملة (IQD أو USD):", currentCurrency);
     if(valCurrency === null) return;
-
-    const valNote = prompt("ملاحظة المصروف:", currentNote);
+    const valNote = prompt("أدخل ملاحظة للمصروف (اختياري):", currentNote);
     if(valNote === null) return;
 
     svc.cost = valCost.trim() ? Number(valCost.trim()) : null;
@@ -510,15 +420,17 @@ function buildSummaryReport(){
   const rows = [];
 
   state.generators.forEach(gen=>{
-    const readings = gen.readings.filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
+    const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
     let hours = 0;
     if(readings.length>=2){
-      hours = readings[readings.length-1].meter - readings[0].meter;
+      const first = readings[0];
+      const last  = readings[readings.length-1];
+      hours = Number(last.meter) - Number(first.meter);
     }
 
     let costIQD = 0;
-    let costUSD = 0;
-    const services = gen.serviceHistory.filter(s=>s.date>=from && s.date<=to);
+    /* USD removed */ let costUSD = 0;
+    const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
     services.forEach(s=>{
       if(s.cost != null){
         if((s.currency||"").toUpperCase()==="USD") costUSD += Number(s.cost);
@@ -543,25 +455,31 @@ function buildOverviewReport(){
   const rows = [];
 
   state.generators.forEach(gen=>{
-    const readings = gen.readings.filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
+    const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
     let hours = 0;
     if(readings.length>=2){
-      hours = readings[readings.length-1].meter - readings[0].meter;
+      const first = readings[0];
+      const last  = readings[readings.length-1];
+      hours = Number(last.meter) - Number(first.meter);
     }
 
     let costIQD = 0;
-    const services = gen.serviceHistory.filter(s=>s.date>=from && s.date<=to);
+    const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
     let lastServiceDate = "";
     services.forEach(s=>{
       if(s.cost != null){
-        if((s.currency||"").toUpperCase()==="IQD") costIQD += Number(s.cost);
+        if((s.currency||"").toUpperCase()==="USD") return; // تم تجاهل USD في هذا التقرير
+        costIQD += Number(s.cost);
       }
-      if(!lastServiceDate || s.date > lastServiceDate){
+      if(!lastServiceDate || s.date>lastServiceDate){
         lastServiceDate = s.date;
       }
     });
 
-    let avgPerHour = hours>0 ? costIQD / hours : 0;
+    let avgPerHour = 0;
+    if(hours>0){
+      avgPerHour = costIQD / hours;
+    }
 
     rows.push({
       name:gen.name,
@@ -580,17 +498,17 @@ function buildExpensesReport(){
   const {from, to} = parseRange();
   const rows = [];
   state.generators.forEach(gen=>{
-    gen.serviceHistory.forEach(s=>{
-      if(s.date>=from && s.date<=to && s.cost!=null){
-        rows.push({
-          gen:gen.name,
-          date:s.date,
-          meter:s.meter,
-          cost:s.cost,
-          currency:(s.currency||"").toUpperCase(),
-          note:s.costNote||""
-        });
-      }
+    (gen.serviceHistory||[]).forEach(s=>{
+      if(s.date<from || s.date>to) return;
+      if(s.cost == null) return;
+      rows.push({
+        gen:gen.name,
+        date:s.date,
+        meter:s.meter,
+        cost:s.cost,
+        currency:(s.currency||"").toUpperCase(),
+        note:s.costNote||""
+      });
     });
   });
   rows.sort((a,b)=> a.gen.localeCompare(b.gen) || a.date.localeCompare(b.date));
@@ -601,16 +519,18 @@ function renderSummaryReport(){
   const rows = buildSummaryReport();
   repSummaryBody.innerHTML = "";
   if(!rows.length){
-    repSummaryBody.innerHTML = "<tr><td colspan='4' class='muted'>لا توجد بيانات.</td></tr>";
+    repSummaryBody.innerHTML = "<tr><td colspan='4' class='muted'>لا توجد بيانات في الفترة المحددة.</td></tr>";
     return;
   }
-
-  let totalHours=0, totalIQD=0, totalSvc=0;
+  // صفوف تفصيلية لكل مولد
+  let totalHours = 0;
+  let totalIQD = 0;
+  let totalSvc = 0;
 
   rows.forEach(r=>{
-    totalHours+=r.hours;
-    totalIQD+=r.costIQD;
-    totalSvc+=r.svcCount;
+    totalHours += Number(r.hours) || 0;
+    totalIQD += Number(r.costIQD) || 0;
+    totalSvc += Number(r.svcCount) || 0;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -622,69 +542,26 @@ function renderSummaryReport(){
     repSummaryBody.appendChild(tr);
   });
 
-  const t = document.createElement("tr");
-  t.style.background="#f9fafb";
-  t.style.fontWeight="700";
-  t.innerHTML = `
-    <td>الإجمالي</td>
+  // صف إجمالي كلي في الأسفل
+  const totalRow = document.createElement("tr");
+  totalRow.style.background = "#f9fafb";
+  totalRow.style.fontWeight = "700";
+  totalRow.innerHTML = `
+    <td>الإجمالي الكلي</td>
     <td>${totalHours}</td>
     <td>${totalIQD}</td>
     <td>${totalSvc}</td>
   `;
-  repSummaryBody.appendChild(t);
-}
-
-function renderOverviewReport(){
-  const rows = buildOverviewReport();
-  repOverviewBody.innerHTML = "";
-  if(!rows.length){
-    repOverviewBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد بيانات.</td></tr>";
-    return;
-  }
-
-  let totalHours=0, totalIQD=0, totalSvc=0;
-
-  rows.forEach(r=>{
-    totalHours+=r.hours;
-    totalIQD+=r.costIQD;
-    totalSvc+=r.svcCount;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.name}</td>
-      <td>${r.hours}</td>
-      <td>${r.costIQD}</td>
-      <td>${r.svcCount}</td>
-      <td>${r.avgPerHour.toFixed(2)}</td>
-      <td>${r.lastServiceDate}</td>
-    `;
-    repOverviewBody.appendChild(tr);
-  });
-
-  const gAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
-
-  const t = document.createElement("tr");
-  t.style.background="#f9fafb";
-  t.style.fontWeight="700";
-  t.innerHTML = `
-    <td>الإجمالي</td>
-    <td>${totalHours}</td>
-    <td>${totalIQD}</td>
-    <td>${totalSvc}</td>
-    <td>${gAvg}</td>
-    <td></td>
-  `;
-  repOverviewBody.appendChild(t);
+  repSummaryBody.appendChild(totalRow);
 }
 
 function renderExpensesReport(){
   const rows = buildExpensesReport();
   repExpensesBody.innerHTML = "";
   if(!rows.length){
-    repExpensesBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد مصاريف.</td></tr>";
+    repExpensesBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد مصاريف في الفترة المحددة.</td></tr>";
     return;
   }
-
   rows.forEach(r=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -699,129 +576,176 @@ function renderExpensesReport(){
   });
 }
 
-// تحديث التقارير
+function renderOverviewReport(){
+  const rows = buildOverviewReport();
+  repOverviewBody.innerHTML = "";
+  if(!rows.length){
+    repOverviewBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد بيانات في الفترة المحددة.</td></tr>";
+    return;
+  }
+
+  let totalHours = 0;
+  let totalIQD = 0;
+  let totalSvc = 0;
+
+  rows.forEach(r=>{
+    totalHours += Number(r.hours) || 0;
+    totalIQD += Number(r.costIQD) || 0;
+    totalSvc += Number(r.svcCount) || 0;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>${r.hours}</td>
+      <td>${r.costIQD}</td>
+      <td>${r.svcCount}</td>
+      <td>${r.avgPerHour ? r.avgPerHour.toFixed(2) : 0}</td>
+      <td>${r.lastServiceDate || ""}</td>
+    `;
+    repOverviewBody.appendChild(tr);
+  });
+
+  const totalRow = document.createElement("tr");
+  totalRow.style.background = "#f9fafb";
+  totalRow.style.fontWeight = "700";
+  const globalAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
+  totalRow.innerHTML = `
+    <td>الإجمالي الكلي</td>
+    <td>${totalHours}</td>
+    <td>${totalIQD}</td>
+    <td>${totalSvc}</td>
+    <td>${globalAvg}</td>
+    <td></td>
+  `;
+  repOverviewBody.appendChild(totalRow);
+}
+
 function buildReports(){
   renderSummaryReport();
   renderOverviewReport();
   renderExpensesReport();
 }
 
-repRefresh.addEventListener("click", ()=> buildReports());
-
-// ====== تحميل البيانات المحفوظة ======
-async function loadInitialData(){
-  try{
-    const stored = localStorage.getItem(LOCAL_KEY);
-    if(stored){
-      try{
-        const data = JSON.parse(stored);
-        if(data && Array.isArray(data.generators)){
-          state = {
-            generators: data.generators.map((g,idx)=>({
-              id: g.id || crypto.randomUUID(),
-              name: g.name || ("Generator #"+(idx+1)),
-              lastServiceMeter: Number(g.lastServiceMeter||0),
-              lastServiceDate: g.lastServiceDate || todayStr(),
-              readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
-              serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
-                date:h.date,
-                meter:Number(h.meter),
-                cost: h.cost!=null ? Number(h.cost) : null,
-                currency:h.currency||"IQD",
-                costNote:h.costNote||""
-              })) : []
-            }))
-          };
-          selectedId = state.generators[0]?.id || null;
-          renderGenList();
-          renderDetail();
-          buildReports();
-          return;
-        }
-      } catch(e){
-        console.warn("خطأ في LocalStorage");
-      }
-    }
-
-    // تحميل ملف JSON خارجي إن وجد
-    const res = await fetch("generators.json");
-    if(res.ok){
-      const data = await res.json();
-      if(data && Array.isArray(data.generators)){
-        state = {
-          generators: data.generators.map((g,idx)=>({
-            id: g.id || crypto.randomUUID(),
-            name: g.name || ("Generator #"+(idx+1)),
-            lastServiceMeter: Number(g.lastServiceMeter||0),
-            lastServiceDate: g.lastServiceDate || todayStr(),
-            readings: Array.isArray(g.readings) ? g.readings.map(r=>({date:r.date, meter:Number(r.meter)})) : [],
-            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
-              date:h.date,
-              meter:Number(h.meter),
-              cost: h.cost!=null ? Number(h.cost) : null,
-              currency:h.currency||"IQD",
-              costNote:h.costNote||""
-            })) : []
-          }))
-        };
-        selectedId = state.generators[0]?.id || null;
-        renderGenList();
-        renderDetail();
-        buildReports();
-      }
-    }
-
-  }catch(err){
-    console.error("خطأ أثناء التحميل", err);
-  }
-}
-
-// ====== حفظ محلي ======
-saveLocalBtn.addEventListener("click", ()=>{
-  try{
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-    alert("تم حفظ البيانات بنجاح");
-  }catch(err){
-    alert("تعذر الحفظ!");
-  }
+repRefresh.addEventListener("click", ()=>{
+  buildReports();
 });
 
-// ====== تصدير CSV مبسط ======
-expCSV.addEventListener("click", ()=>{
-  const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
-  const lines = [header.join(",")];
+// تصدير CSV حسب التبويب النشط
+repCSV.addEventListener("click", ()=>{
+  const activeTabBtn = document.querySelector(".tab-btn.active");
+  const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : "summary";
+  const {from, to} = parseRange();
 
-  state.generators.forEach(gen=>{
-    const cm = currentMeter(gen) ?? "";
-    const since = hoursSinceService(gen);
-    const next  = nextDueAt(gen);
-    const st = statusObj(gen);
+  let lines = [];
+  lines.push(`الفترة من: ${from === "0000-01-01" ? "البداية" : from} إلى: ${to === "9999-12-31" ? "النهاية" : to}`);
+
+  if(activeTab === "summary"){
+    const rows = buildSummaryReport();
+    const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة"];
+    lines.push(header.join(","));
+
+    let totalHours = 0;
+    let totalIQD = 0;
+    let totalSvc = 0;
+
+    rows.forEach(r=>{
+      totalHours += Number(r.hours) || 0;
+      totalIQD += Number(r.costIQD) || 0;
+      totalSvc += Number(r.svcCount) || 0;
+
+      lines.push([
+        `"${String(r.name||"").replace(/"/g,'""')}"`,
+        r.hours,
+        r.costIQD,
+        r.svcCount
+      ].join(","));
+    });
+
     lines.push([
-      `"${gen.name.replace(/"/g,'""')}"`,
-      gen.lastServiceMeter ?? "",
-      gen.lastServiceDate ?? "",
-      cm,
-      since,
-      next,
-      st.label
+      `"الإجمالي الكلي"`,
+      totalHours,
+      totalIQD,
+      totalSvc
     ].join(","));
-  });
+  } else if(activeTab === "overview"){
+    const rows = buildOverviewReport();
+    const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة","معدل الكلفة لكل ساعة","آخر تاريخ صيانة"];
+    lines.push(header.join(","));
 
-  const blob = new Blob([lines.join("\n")],{type:"text/csv"});
+    let totalHours = 0;
+    let totalIQD = 0;
+    let totalSvc = 0;
+
+    rows.forEach(r=>{
+      totalHours += Number(r.hours) || 0;
+      totalIQD += Number(r.costIQD) || 0;
+      totalSvc += Number(r.svcCount) || 0;
+
+      lines.push([
+        `"${String(r.name||"").replace(/"/g,'""')}"`,
+        r.hours,
+        r.costIQD,
+        r.svcCount,
+        r.avgPerHour ? r.avgPerHour.toFixed(2) : 0,
+        `"${String(r.lastServiceDate||"").replace(/"/g,'""')}"`
+      ].join(","));
+    });
+
+    const globalAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
+    lines.push([
+      `"الإجمالي الكلي"`,
+      totalHours,
+      totalIQD,
+      totalSvc,
+      globalAvg,
+      ""
+    ].join(","));
+  } else {
+    const rows = buildExpensesReport();
+    const header = ["المولد","تاريخ الخدمة","قراءة العداد","المبلغ","العملة","ملاحظة"];
+    lines.push(header.join(","));
+
+    rows.forEach(r=>{
+      lines.push([
+        `"${String(r.gen||"").replace(/"/g,'""')}"`,
+        r.date,
+        r.meter,
+        r.cost,
+        r.currency,
+        `"${String(r.note||"").replace(/"/g,'""')}"`
+      ].join(","));
+    });
+  }
+
+  const csvContent = "\ufeff" + lines.join("\n");
+  const blob = new Blob([csvContent],{type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+  let fnameBase;
+  if(activeTab === "summary") fnameBase = "generators-summary-report";
+  else if(activeTab === "overview") fnameBase = "generators-overview-report";
+  else fnameBase = "generators-expenses-report";
   a.href = url;
-  a.download = "generators-quick-summary.csv";
+  a.download = fnameBase + ".csv";
   a.click();
   URL.revokeObjectURL(url);
 });
 
-// ====== تصدير JSON ======
+// تبويب التقارير
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".report-tab").forEach(t=>t.style.display="none");
+    if(tab==="summary") $("rep-summary").style.display = "";
+    if(tab==="overview") $("rep-overview").style.display = "";
+    if(tab==="expenses") $("rep-expenses").style.display = "";
+  });
+});
+
+// ====== تصدير / استيراد JSON ======
 expJSON.addEventListener("click", ()=>{
-  if(!isAdmin()){
-    alert("للأدمن فقط");
-    return;
-  }
   const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -831,21 +755,14 @@ expJSON.addEventListener("click", ()=>{
   URL.revokeObjectURL(url);
 });
 
-// ====== استيراد JSON ======
 impJSON.addEventListener("change", (e)=>{
-  if(!isAdmin()){
-    alert("للأدمن فقط");
-    e.target.value = "";
-    return;
-  }
   const file = e.target.files?.[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = ()=>{
     try{
       const data = JSON.parse(String(reader.result));
-      if(!Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
-
+      if(!data || !Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
       data.generators = data.generators.map((g,idx)=>({
         id: g.id || crypto.randomUUID(),
         name: g.name || ("Generator #"+(idx+1)),
@@ -855,51 +772,57 @@ impJSON.addEventListener("change", (e)=>{
         serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h=>({
           date:h.date,
           meter:Number(h.meter),
-          cost: h.cost!=null ? Number(h.cost) : null,
-          currency:h.currency||"IQD",
-          costNote:h.costNote||""
+          cost: h.cost != null ? Number(h.cost) : null,
+          currency: h.currency || "IQD",
+          costNote: h.costNote || ""
         })) : []
       }));
-
       state = data;
       selectedId = state.generators[0]?.id || null;
       renderGenList();
       renderDetail();
       buildReports();
-
     }catch(err){
-      alert("خطأ بالاستيراد: " + err.message);
+      alert("تعذر استيراد الملف: " + (err.message||err));
     }
   };
   reader.readAsText(file);
 });
 
-// ====== تهيئة ======
+// ====== ملخص CSV بسيط من الهيدر ======
+expCSV.addEventListener("click", ()=>{
+  const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
+  const lines = [header.join(",")];
+  state.generators.forEach(gen=>{
+    const cm = currentMeter(gen) ?? "";
+    const since = hoursSinceService(gen);
+    const next  = nextDueAt(gen);
+    const st = statusObj(gen);
+    lines.push([
+      `"${(gen.name||"").replace(/"/g,'""')}"`,
+      gen.lastServiceMeter ?? "",
+      gen.lastServiceDate ?? "",
+      cm,
+      since,
+      next,
+      st.label
+    ].join(","));
+  });
+  const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "generators-quick-summary.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ====== تهيئة أولية ======
 (function init(){
   genDate.value = todayStr();
+  repFrom.value = "";
+  repTo.value   = "";
   renderGenList();
   renderDetail();
   buildReports();
-  loadInitialData();
-})();
-
-// ====== استرجاع جلسة الدخول ======
-(function restoreUserSession(){
-  try{
-    const stored = localStorage.getItem(USER_STORAGE_KEY);
-    if(!stored) return;
-
-    const parsed = JSON.parse(stored);
-    const match = USERS.find(u=>u.username===parsed.username && u.role===parsed.role);
-    if(!match) return;
-
-    currentUser = {username: match.username, role: match.role};
-
-    loginScreen.style.display = "none";
-    appRoot.style.display = "block";
-    applyRoleUI();
-
-  }catch(e){
-    console.error("خطأ في استرجاع الجلسة");
-  }
 })();
