@@ -1,3 +1,14 @@
+شوف هذا الملف كامل بعد التصحيح 👇
+عدّلت لك:
+
+* حذف تكرار تعريف `genName`.
+* ترتيب كود حفظ البيانات في `localStorage`.
+* تنظيف تكرار كود تصدير الـ CSV في النهاية.
+* التأكد أن كل الأقواس والأحداث صحيحة.
+
+انسخ الكود كامل واستبدل ملفك به:
+
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -559,7 +570,6 @@
                 <th>المولد</th>
                 <th>إجمالي ساعات التشغيل</th>
                 <th>إجمالي المصاريف (IQD)</th>
-                
                 <th>عدد خدمات الصيانة</th>
               </tr>
             </thead>
@@ -608,18 +618,14 @@
     </section>
   </main>
 
-    <script>
+  <script>
     // ====== الحالة العامة ======
-    let state = {
-      generators: []
-    };
+    let state = { generators: [] };
     let selectedId = null;
     const LOCAL_KEY = "generatorSystemData_v1";
 
     // ====== DOM helper ======
-    const $ = (id)=>document.getElementById(id);
-
-    const genName   = $("gen-name");
+    const $ = (id) => document.getElementById(id);
 
     const genName   = $("gen-name");
     const genSmr    = $("gen-smr");
@@ -797,7 +803,6 @@
       logBody.innerHTML = "";
       const readings = (gen.readings||[]).slice().sort(byDateAsc);
 
-      // baseline لكل قراءة
       function baselineForDate(dateStr){
         const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
         let base = null;
@@ -950,7 +955,6 @@
       }
       hideError(rErr);
 
-      // منع تكرار نفس التاريخ+العداد
       const exists = (gen.readings||[]).some(x=>x.date===d && Number(x.meter)===m);
       if(exists){
         showError(rErr,"هذه القراءة موجودة بالفعل.");
@@ -1044,7 +1048,7 @@
         }
 
         let costIQD = 0;
-        /* USD removed */ let costUSD = 0;
+        let costUSD = 0;
         const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
         services.forEach(s=>{
           if(s.cost != null){
@@ -1083,7 +1087,7 @@
         let lastServiceDate = "";
         services.forEach(s=>{
           if(s.cost != null){
-            if((s.currency||"").toUpperCase()==="USD") return; // تم تجاهل USD في هذا التقرير
+            if((s.currency||"").toUpperCase()==="USD") return;
             costIQD += Number(s.cost);
           }
           if(!lastServiceDate || s.date>lastServiceDate){
@@ -1137,7 +1141,6 @@
         repSummaryBody.innerHTML = "<tr><td colspan='4' class='muted'>لا توجد بيانات في الفترة المحددة.</td></tr>";
         return;
       }
-      // صفوف تفصيلية لكل مولد
       let totalHours = 0;
       let totalIQD = 0;
       let totalSvc = 0;
@@ -1157,7 +1160,6 @@
         repSummaryBody.appendChild(tr);
       });
 
-      // صف إجمالي كلي في الأسفل
       const totalRow = document.createElement("tr");
       totalRow.style.background = "#f9fafb";
       totalRow.style.fontWeight = "700";
@@ -1169,7 +1171,8 @@
       `;
       repSummaryBody.appendChild(totalRow);
     }
-function renderExpensesReport(){
+
+    function renderExpensesReport(){
       const rows = buildExpensesReport();
       repExpensesBody.innerHTML = "";
       if(!rows.length){
@@ -1244,19 +1247,16 @@ function renderExpensesReport(){
       buildReports();
     });
 
-    
-repCSV.addEventListener("click", ()=>{
-      // نحدد التبويب النشط (ملخص أو مصاريف)
+    // تصدير تقارير التبويبات CSV
+    repCSV.addEventListener("click", ()=>{
       const activeTabBtn = document.querySelector(".tab-btn.active");
       const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : "summary";
       const {from, to} = parseRange();
 
       let lines = [];
-      // سطر أول يوضح الفترة المختارة
       lines.push(`الفترة من: ${from === "0000-01-01" ? "البداية" : from} إلى: ${to === "9999-12-31" ? "النهاية" : to}`);
 
       if(activeTab === "summary"){
-        // تصدير تقرير الملخص بنفس الأرقام المعروضة في الجدول بما فيها الإجمالي
         const rows = buildSummaryReport();
         const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة"];
         lines.push(header.join(","));
@@ -1278,7 +1278,6 @@ repCSV.addEventListener("click", ()=>{
           ].join(","));
         });
 
-        // صف الإجمالي الكلي كما في الجدول
         lines.push([
           `"الإجمالي الكلي"`,
           totalHours,
@@ -1286,7 +1285,6 @@ repCSV.addEventListener("click", ()=>{
           totalSvc
         ].join(","));
       } else if(activeTab === "overview"){
-        // تصدير التقرير الشامل بنفس شكل الجدول
         const rows = buildOverviewReport();
         const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة","معدل الكلفة لكل ساعة","آخر تاريخ صيانة"];
         lines.push(header.join(","));
@@ -1311,7 +1309,6 @@ repCSV.addEventListener("click", ()=>{
         });
 
         const globalAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
-        // صف الإجمالي الكلي كما في الجدول
         lines.push([
           `"الإجمالي الكلي"`,
           totalHours,
@@ -1321,7 +1318,6 @@ repCSV.addEventListener("click", ()=>{
           ""
         ].join(","));
       } else {
-        // تصدير تبويب المصاريف بالتفصيل
         const rows = buildExpensesReport();
         const header = ["المولد","تاريخ الخدمة","قراءة العداد","المبلغ","العملة","ملاحظة"];
         lines.push(header.join(","));
@@ -1338,7 +1334,6 @@ repCSV.addEventListener("click", ()=>{
         });
       }
 
-      // إضافة BOM لضمان ظهور العربية بشكل صحيح في Excel
       const csvContent = "\ufeff" + lines.join("\n");
       const blob = new Blob([csvContent],{type:"text/csv;charset=utf-8"});
       const url = URL.createObjectURL(blob);
@@ -1352,7 +1347,8 @@ repCSV.addEventListener("click", ()=>{
       a.click();
       URL.revokeObjectURL(url);
     });
-// تبويب التقارير
+
+    // تبويب التقارير
     document.querySelectorAll(".tab-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
@@ -1384,7 +1380,6 @@ repCSV.addEventListener("click", ()=>{
         try{
           const data = JSON.parse(String(reader.result));
           if(!data || !Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
-          // تأمين الحقول
           data.generators = data.generators.map((g,idx)=>({
             id: g.id || crypto.randomUUID(),
             name: g.name || ("Generator #"+(idx+1)),
@@ -1411,7 +1406,7 @@ repCSV.addEventListener("click", ()=>{
       reader.readAsText(file);
     });
 
-     // ====== حفظ البيانات محلياً في المتصفح ======
+    // ====== حفظ البيانات محلياً في المتصفح ======
     saveLocalBtn.addEventListener("click", ()=>{
       try{
         localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
@@ -1450,35 +1445,9 @@ repCSV.addEventListener("click", ()=>{
       URL.revokeObjectURL(url);
     });
 
-      const lines = [header.join(",")];
-      state.generators.forEach(gen=>{
-        const cm = currentMeter(gen) ?? "";
-        const since = hoursSinceService(gen);
-        const next  = nextDueAt(gen);
-        const st = statusObj(gen);
-        lines.push([
-          `"${(gen.name||"").replace(/"/g,'""')}"`,
-          gen.lastServiceMeter ?? "",
-          gen.lastServiceDate ?? "",
-          cm,
-          since,
-          next,
-          st.label
-        ].join(","));
-      });
-      const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "generators-quick-summary.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  
-       // ====== تحميل البيانات من LocalStorage أو من generators.json ======
+    // ====== تحميل البيانات من LocalStorage أو من generators.json ======
     async function loadInitialData(){
       try {
-        // 1) محاولة التحميل من التخزين المحلي أولاً
         const stored = localStorage.getItem(LOCAL_KEY);
         if (stored) {
           try {
@@ -1515,7 +1484,6 @@ repCSV.addEventListener("click", ()=>{
           }
         }
 
-        // 2) إن لم توجد بيانات محليّة، نقرأ من generators.json
         const res = await fetch("generators.json");
         if (!res.ok) {
           console.warn("لم يتم العثور على ملف generators.json");
@@ -1559,21 +1527,19 @@ repCSV.addEventListener("click", ()=>{
       }
     }
 
-
     // ====== تهيئة أولية ======
-     (function init(){
+    (function init(){
       genDate.value = todayStr();
       repFrom.value = "";
       repTo.value   = "";
 
-      // عرض أولي فارغ
       renderGenList();
       renderDetail();
       buildReports();
 
-      // تحميل البيانات من ملف generators.json على GitHub
       loadInitialData();
     })();
   </script>
 </body>
 </html>
+```
