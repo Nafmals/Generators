@@ -1408,6 +1408,17 @@ repCSV.addEventListener("click", ()=>{
 
     // ====== ملخص CSV بسيط من الهيدر ======
     expCSV.addEventListener("click", ()=>{
+          // ====== حفظ البيانات محلياً في المتصفح ======
+    saveLocalBtn.addEventListener("click", ()=>{
+      try{
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+        alert("تم حفظ البيانات على هذا الجهاز بنجاح ✅");
+      }catch(err){
+        console.error("LocalStorage error", err);
+        alert("تعذر حفظ البيانات محلياً (ربما مساحة التخزين ممتلئة).");
+      }
+    });
+      
       const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
       const lines = [header.join(",")];
       state.generators.forEach(gen=>{
@@ -1433,9 +1444,48 @@ repCSV.addEventListener("click", ()=>{
       a.click();
       URL.revokeObjectURL(url);
     });
-    // ====== تحميل البيانات من generators.json تلقائياً ======
+  
+       // ====== تحميل البيانات من LocalStorage أو من generators.json ======
     async function loadInitialData(){
       try {
+        // 1) محاولة التحميل من التخزين المحلي أولاً
+        const stored = localStorage.getItem(LOCAL_KEY);
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            if (data && Array.isArray(data.generators)) {
+              state = {
+                generators: data.generators.map((g, idx) => ({
+                  id: g.id || crypto.randomUUID(),
+                  name: g.name || ("Generator #" + (idx + 1)),
+                  lastServiceMeter: Number(g.lastServiceMeter || 0),
+                  lastServiceDate: g.lastServiceDate || todayStr(),
+                  readings: Array.isArray(g.readings) ? g.readings.map(r => ({
+                    date: r.date,
+                    meter: Number(r.meter)
+                  })) : [],
+                  serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
+                    date: h.date,
+                    meter: Number(h.meter),
+                    cost: h.cost != null ? Number(h.cost) : null,
+                    currency: h.currency || "IQD",
+                    costNote: h.costNote || ""
+                  })) : []
+                }))
+              };
+              selectedId = state.generators[0]?.id || null;
+              renderGenList();
+              renderDetail();
+              buildReports();
+              console.log("Loaded data from localStorage");
+              return;
+            }
+          } catch(e){
+            console.warn("تعذر قراءة البيانات من التخزين المحلي، سيتم استخدام ملف JSON", e);
+          }
+        }
+
+        // 2) إن لم توجد بيانات محليّة، نقرأ من generators.json
         const res = await fetch("generators.json");
         if (!res.ok) {
           console.warn("لم يتم العثور على ملف generators.json");
@@ -1449,7 +1499,6 @@ repCSV.addEventListener("click", ()=>{
           return;
         }
 
-        // تعيين البيانات في state بنفس شكل الاستيراد اليدوي
         state = {
           generators: data.generators.map((g, idx) => ({
             id: g.id || crypto.randomUUID(),
@@ -1470,17 +1519,16 @@ repCSV.addEventListener("click", ()=>{
           }))
         };
 
-        // اختيار أول مولّد
         selectedId = state.generators[0]?.id || null;
-
-        // إعادة رسم الواجهة
         renderGenList();
         renderDetail();
         buildReports();
+        console.log("Loaded data from generators.json");
       } catch (err) {
-        console.error("خطأ أثناء تحميل ملف generators.json", err);
+        console.error("خطأ أثناء تحميل البيانات", err);
       }
     }
+
 
     // ====== تهيئة أولية ======
      (function init(){
