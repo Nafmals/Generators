@@ -578,7 +578,7 @@
     <header>
       <div>
         <h1><span class="logo">N</span> نظام إدارة ساعات تشغيل المولدات والمصاريف</h1>
-        <div class="subtitle">متابعة تشغيل المولدات، الصيانة الدورية، الصيانة الطارئة، والمصاريف بدقة وسهولة.</div>
+        <div class="subtitle">متابعة تشغيل المولدات، الصيانة الدورية والمصاريف بدقة وسهولة.</div>
       </div>
       <div class="top-actions">
         <button id="export-json" class="secondary">تصدير JSON</button>
@@ -707,56 +707,6 @@
             <tbody id="log-body"></tbody>
           </table>
         </div>
-
-        <!-- الصيانات الطارئة -->
-        <h3 style="margin-top:18px;">الصيانات الطارئة</h3>
-
-        <div class="add-reading-grid">
-          <div class="field">
-            <label>نوع المولد</label>
-            <input id="em-gen" disabled placeholder="سيتم تعبئة اسم المولد تلقائياً">
-          </div>
-          <div class="field">
-            <label>تاريخ الصيانة الطارئة</label>
-            <input id="em-date" type="date">
-          </div>
-          <div class="field">
-            <label>تكلفة الصيانة الطارئة (IQD)</label>
-            <input id="em-amount" type="number" min="0" step="1" placeholder="مثال: 150000">
-          </div>
-        </div>
-
-        <div class="field">
-          <label>ملاحظة (اختياري)</label>
-          <input id="em-note" placeholder="مثال: تغيير مضخة ديزل (طارئ)">
-        </div>
-
-        <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px;">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;">
-            <input type="checkbox" id="em-paid" style="width:auto;margin-top:0;">
-            تم دفع المبلغ
-          </label>
-          <button class="btn-primary" id="em-add" style="padding:6px 14px;font-size:12px;">
-            إضافة صيانة طارئة
-          </button>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>نوع المولد</th>
-                <th>المبلغ (IQD)</th>
-                <th>تم الدفع</th>
-                <th>ملاحظة</th>
-                <th>إجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="em-body"></tbody>
-          </table>
-        </div>
-
       </section>
 
       <!-- التقارير -->
@@ -788,7 +738,7 @@
                 <tr>
                   <th>اسم المولد</th>
                   <th>عدد القراءات</th>
-                  <th>عدد خدمات الصيانة الدورية</th>
+                  <th>عدد خدمات الصيانة</th>
                   <th>ساعات التشغيل الإجمالية</th>
                   <th>إجمالي المصاريف (IQD)</th>
                 </tr>
@@ -818,7 +768,7 @@
         </div>
 
         <div id="rep-expenses" class="report-tab">
-          <p class="muted" style="margin:0 0 6px;">كل المصاريف (الصيانة الدورية + الصيانات الطارئة) حسب المولد.</p>
+          <p class="muted" style="margin:0 0 6px;">كل المصاريف حسب المولد.</p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -873,15 +823,6 @@
     const addReadingBtn = $("add-reading");
     const rErr = $("r-err");
     const logBody = $("log-body");
-
-    // عناصر الصيانة الطارئة
-    const emGen   = $("em-gen");
-    const emDate  = $("em-date");
-    const emAmount= $("em-amount");
-    const emNote  = $("em-note");
-    const emPaid  = $("em-paid");
-    const emAdd   = $("em-add");
-    const emBody  = $("em-body");
 
     const repFrom = $("rep-from");
     const repTo   = $("rep-to");
@@ -1062,10 +1003,6 @@
         mBar.style.width = "0%";
         mBar.className = "progress-bar-in";
         logBody.innerHTML = "";
-        if(emGen && emBody){
-          emGen.value = "";
-          emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا يوجد مولد محدد.</td></tr>";
-        }
         return;
       }
 
@@ -1096,7 +1033,6 @@
       }
 
       renderLog(gen);
-      renderEmergency(gen);
     }
 
     // ====== سجل القراءات ======
@@ -1159,44 +1095,6 @@
       }
     }
 
-    // ====== الصيانات الطارئة ======
-    function renderEmergency(gen){
-      if(!emGen || !emBody) return;
-
-      if(!gen){
-        emGen.value = "";
-        emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا يوجد مولد محدد.</td></tr>";
-        return;
-      }
-
-      emGen.value = gen.name || "";
-
-      const list = (gen.emergency || []);
-      emBody.innerHTML = "";
-
-      if(!list.length){
-        emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد صيانات طارئة مسجلة لهذا المولد.</td></tr>";
-        return;
-      }
-
-      const rows = list.slice().sort((a,b)=> (a.date||"").localeCompare(b.date||""));
-      rows.forEach(e=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${e.date || ""}</td>
-          <td>${gen.name}</td>
-          <td>${e.amount ?? ""}</td>
-          <td>${e.paid ? "✅" : "❌"}</td>
-          <td>${e.note || ""}</td>
-          <td class="actions">
-            <button class="btn-small" data-em-action="toggle" data-id="${e.id}" style="font-size:11px;padding:3px 7px;">تبديل الدفع</button>
-            <button class="btn-small" data-em-action="del" data-id="${e.id}" style="font-size:11px;padding:3px 7px;">🗑</button>
-          </td>
-        `;
-        emBody.appendChild(tr);
-      });
-    }
-
     // ====== رسائل خطأ بسيطة ======
     function showError(el, msg){
       el.textContent = msg;
@@ -1220,8 +1118,7 @@
         lastServiceMeter: Number(genSmr.value),
         lastServiceDate: genDate.value,
         readings: [],
-        serviceHistory: [],
-        emergency: []
+        serviceHistory: []
       };
       state.generators.unshift(g);
       selectedId = g.id;
@@ -1343,7 +1240,7 @@
             gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===m));
           }
         }else{
-          if(!confirm("تعيين هذه القراءة كخدمة صيانة دورية؟")) return;
+          if(!confirm("تعيين هذه القراءة كخدمة صيانة؟")) return;
           svc = {date:d, meter:m, cost:null, currency:"IQD", costNote:""};
           gen.serviceHistory.push(svc);
         }
@@ -1377,69 +1274,6 @@
 
       renderGenList();
       renderDetail();
-      buildReports();
-    });
-
-    // إضافة صيانة طارئة
-    emAdd?.addEventListener("click", ()=>{
-      const gen = state.generators.find(g=>g.id===selectedId);
-      if(!gen){
-        alert("رجاءً اختر مولد أولاً قبل إضافة صيانة طارئة.");
-        return;
-      }
-
-      const amount = Number(emAmount.value || 0);
-      const date   = emDate.value || todayStr();
-      const note   = emNote.value.trim();
-      const paid   = !!emPaid.checked;
-
-      if(!amount || amount <= 0){
-        alert("الرجاء إدخال مبلغ صحيح للصيانة الطارئة.");
-        return;
-      }
-
-      if(!gen.emergency) gen.emergency = [];
-
-      gen.emergency.push({
-        id: crypto.randomUUID(),
-        date,
-        amount,
-        paid,
-        note
-      });
-
-      // تنظيف الحقول
-      emAmount.value = "";
-      emNote.value   = "";
-      emPaid.checked = false;
-
-      renderEmergency(gen);
-      buildReports();
-    });
-
-    // إجراءات جدول الصيانة الطارئة: تبديل حالة الدفع / حذف
-    emBody?.addEventListener("click",(e)=>{
-      const btn = e.target.closest("button[data-em-action]");
-      if(!btn) return;
-
-      const gen = state.generators.find(g=>g.id===selectedId);
-      if(!gen || !gen.emergency) return;
-
-      const id = btn.dataset.id;
-      const action = btn.dataset.emAction;
-      const item = gen.emergency.find(x=>x.id===id);
-      if(!item) return;
-
-      if(action === "toggle"){
-        item.paid = !item.paid;
-      }
-
-      if(action === "del"){
-        if(!confirm("هل تريد حذف هذه الصيانة الطارئة؟")) return;
-        gen.emergency = gen.emergency.filter(x=>x.id!==id);
-      }
-
-      renderEmergency(gen);
       buildReports();
     });
 
@@ -1479,13 +1313,6 @@
               cost: h.cost != null ? Number(h.cost) : null,
               currency: h.currency || "IQD",
               costNote: h.costNote || ""
-            })) : [],
-            emergency: Array.isArray(g.emergency) ? g.emergency.map(e=>({
-              id: e.id || crypto.randomUUID(),
-              date: e.date || todayStr(),
-              amount: Number(e.amount||0),
-              paid: !!e.paid,
-              note: e.note || ""
             })) : []
           }));
           state.generators = data.generators;
@@ -1585,7 +1412,6 @@
       const {from, to} = parseRange();
       const rows = [];
       state.generators.forEach(gen=>{
-        // مصاريف الصيانة الدورية
         (gen.serviceHistory||[]).forEach(s=>{
           if(s.date<from || s.date>to) return;
           if(s.cost == null) return;
@@ -1596,19 +1422,6 @@
             cost:s.cost,
             currency:(s.currency||"").toUpperCase(),
             note:s.costNote||""
-          });
-        });
-
-        // مصاريف الصيانة الطارئة
-        (gen.emergency || []).forEach(e=>{
-          if(e.date<from || e.date>to) return;
-          rows.push({
-            gen: gen.name,
-            date: e.date,
-            meter: "",
-            cost: e.amount,
-            currency: "IQD",
-            note: (e.note ? e.note + " - " : "") + "صيانة طارئة" + (e.paid ? " (مدفوعة)" : " (غير مدفوعة)")
           });
         });
       });
