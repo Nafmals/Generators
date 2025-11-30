@@ -1,496 +1,608 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>نظام إدارة ساعات المولدات والمصاريف - إصدار مطوّر</title>
-
+  <meta charset="UTF-8">
+  <title>نظام إدارة ساعات تشغيل المولدات والمصاريف</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root{
-      --bg:#f4f5f7;
-      --card:#ffffff;
-      --border:#e5e7eb;
-      --muted:#6b7280;
-      --primary:#111827;
-      --safe:#22c55e;
-      --soon:#f97316;
-      --due:#ef4444;
-      --radius:14px;
+      --bg:#0f172a;
+      --card:#020617;
+      --card2:#020617;
+      --border:#1e293b;
+      --border-soft:#1e293b99;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --accent:#22c55e;
+      --accent-soft:#22c55e22;
+      --danger:#ef4444;
+      --danger-soft:#ef444422;
+      --warning:#eab308;
+      --warning-soft:#eab30822;
+      --chip-bg:#1f2937;
+      --chip-border:#374151;
+      --input-bg:#020617;
+      --input-border:#1e293b;
+      --btn-bg:#1d4ed8;
+      --btn-bg-hover:#2563eb;
+      --btn-text:#e5e7eb;
     }
 
-    *{box-sizing:border-box;font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif}
+    *{box-sizing:border-box;font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;}
 
     body{
       margin:0;
-      background:var(--bg);
-      color:#111827;
-    }
-
-    /* شاشة تسجيل الدخول */
-    .login-wrap{
+      background:radial-gradient(circle at top,#1e293b 0,#020617 50%,#000 100%);
+      color:var(--text);
       min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:var(--bg);
       padding:16px;
     }
-    .login-card{
-      background:#fff;
-      border-radius:var(--radius);
-      padding:22px 20px 20px;
-      max-width:360px;
-      width:100%;
-      border:1px solid var(--border);
-      box-shadow:0 10px 25px rgba(15,23,42,.12);
+
+    h1,h2,h3{
+      margin:0 0 8px;
+      font-weight:600;
     }
-    .login-card h2{
-      margin:0 0 4px;
-      font-size:18px;
-    }
-    .login-card p{
-      margin:0 0 14px;
-      font-size:12px;
-      color:var(--muted);
-    }
-    #login-error{
-      margin-top:8px;
-      font-size:12px;
-      color:#b91c1c;
-      display:none;
-    }
-    .logout-btn{
-      font-size:11px;
-      padding:5px 10px;
+
+    .app{
+      max-width:1400px;
+      margin:0 auto;
     }
 
     header{
-      position:sticky;
-      top:0;
-      z-index:20;
-      background:#fff;
-      border-bottom:1px solid var(--border);
-      padding:12px 20px;
       display:flex;
-      align-items:center;
       justify-content:space-between;
+      align-items:center;
+      margin-bottom:12px;
       gap:12px;
       flex-wrap:wrap;
     }
 
     header h1{
-      margin:0;
-      font-size:18px;
+      font-size:20px;
       display:flex;
-      flex-direction:column;
-      gap:2px;
-    }
-    header h1 span{
-      font-size:11px;
-      color:var(--muted);
-      font-weight:400;
+      align-items:center;
+      gap:8px;
     }
 
-    .header-actions{
+    header h1 span.logo{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      background:radial-gradient(circle at 30% 30%,#22c55e,#4ade80,#22c55e,#0f172a);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+      color:#020617;
+      font-weight:700;
+      box-shadow:0 0 0 1px #22c55e55, 0 10px 30px #22c55e55;
+    }
+
+    header .subtitle{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .top-actions{
       display:flex;
-      flex-wrap:wrap;
       gap:8px;
+      flex-wrap:wrap;
       align-items:center;
     }
 
     button{
+      border:none;
       border-radius:999px;
-      border:1px solid var(--border);
-      padding:8px 14px;
-      background:#fff;
+      padding:6px 12px;
+      font-size:12px;
       cursor:pointer;
-      font-size:13px;
       display:inline-flex;
       align-items:center;
       gap:6px;
+      background:var(--btn-bg);
+      color:var(--btn-text);
+      transition:background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
     }
+
     button:hover{
-      background:#f9fafb;
+      background:var(--btn-bg-hover);
+      transform:translateY(-1px);
+      box-shadow:0 6px 18px rgba(37,99,235,0.35);
     }
-    .btn-primary{
-      background:var(--primary);
-      color:#fff;
-      border-color:var(--primary);
+
+    button:active{
+      transform:translateY(0);
+      box-shadow:none;
     }
-    .btn-primary:hover{
+
+    button.secondary{
+      background:transparent;
+      border:1px solid var(--border-soft);
+      color:var(--muted);
+    }
+
+    button.secondary:hover{
       background:#020617;
+      border-color:#4b5563;
     }
-    .btn-danger{
-      color:#b91c1c;
-      border-color:#fecaca;
-      background:#fef2f2;
+
+    button.danger{
+      background:var(--danger-soft);
+      color:#fecaca;
+      border:1px solid #ef4444aa;
+    }
+
+    button.danger:hover{
+      background:var(--danger);
+      color:#fee2e2;
     }
 
     main{
-      padding:16px 20px 40px;
       display:grid;
-      grid-template-columns:320px minmax(0, 2.2fr) minmax(0, 1.6fr);
-      gap:16px;
+      grid-template-columns:280px minmax(0,1.4fr) minmax(0,1.2fr);
+      gap:12px;
     }
 
     .card{
       background:var(--card);
-      border-radius:var(--radius);
+      border-radius:18px;
+      padding:12px 12px 14px;
       border:1px solid var(--border);
-      padding:14px 14px 16px;
-      box-shadow:0 1px 0 rgba(15,23,42,.03);
+      box-shadow:0 16px 40px rgba(15,23,42,0.9);
+      position:relative;
+      overflow:hidden;
     }
-    .card h2{
-      margin:0 0 10px;
+
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:radial-gradient(circle at top,rgba(56,189,248,0.06) 0,transparent 55%);
+      opacity:0.7;
+      pointer-events:none;
+    }
+
+    .card > *{
+      position:relative;
+      z-index:1;
+    }
+
+    section h2{
       font-size:15px;
-    }
-    .card h3{
-      margin:12px 0 8px;
-      font-size:14px;
+      margin-bottom:6px;
     }
 
-    label{
-      font-size:12px;
-      color:#374151;
-      font-weight:600;
-    }
-    label small{
-      font-weight:400;
+    .muted{
       color:var(--muted);
-    }
-
-    input, select{
-      width:100%;
-      padding:9px 10px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      font-size:13px;
-      margin-top:4px;
-      background:#fff;
-      transition:border-color .15s, box-shadow .15s;
-    }
-    input:focus, select:focus{
-      outline:none;
-      border-color:#94a3b8;
-      box-shadow:0 0 0 3px rgba(148,163,184,.28);
+      font-size:11px;
     }
 
     .field{
       display:flex;
       flex-direction:column;
-      margin-bottom:8px;
+      gap:2px;
+      margin-bottom:6px;
     }
 
-    .gen-list{
-      list-style:none;
-      padding:0;
-      margin:8px 0 0;
-      max-height:420px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
+    label{
+      font-size:11px;
+      color:var(--muted);
     }
 
-    .gen-item{
-      border-radius:12px;
-      border:1px solid var(--border);
-      padding:8px 10px;
-      cursor:pointer;
-      background:#fff;
-      display:flex;
-      flex-direction:column;
-      gap:4px;
+    input,select{
+      background:var(--input-bg);
+      border-radius:999px;
+      border:1px solid var(--input-border);
+      padding:6px 9px;
+      font-size:12px;
+      color:var(--text);
+      outline:none;
+      width:100%;
     }
-    .gen-item.active{
-      border-color:#4b5563;
-      box-shadow:0 0 0 2px rgba(148,163,184,.35);
-      background:#f9fafb;
+
+    input:focus,select:focus{
+      border-color:#38bdf8;
+      box-shadow:0 0 0 1px #38bdf866;
     }
-    .gen-item-header{
+
+    input[type="date"]{
+      direction:ltr;
+      text-align:right;
+    }
+
+    .pill{
+      font-size:11px;
+      border-radius:999px;
+      padding:3px 8px;
+      border:1px solid var(--chip-border);
+      background:var(--chip-bg);
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+    }
+
+    .pill-dot{
+      width:7px;
+      height:7px;
+      border-radius:999px;
+    }
+
+    .dot-green{background:#22c55e;}
+    .dot-yellow{background:#eab308;}
+    .dot-red{background:#ef4444;}
+    .dot-muted{background:#6b7280;}
+
+    .status-pill{
+      font-size:11px;
+      border-radius:999px;
+      padding:2px 7px;
+      border:1px solid var(--chip-border);
+      background:var(--chip-bg);
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+    }
+
+    .status-pill.safe{border-color:#22c55e55;background:#22c55e16;color:#bbf7d0;}
+    .status-pill.soon{border-color:#eab30866;background:#eab30812;color:#fef08a;}
+    .status-pill.due{border-color:#ef4444aa;background:#ef444414;color:#fecaca;}
+
+    .row{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:6px;
-    }
-    .gen-name{
-      font-size:13px;
-      font-weight:600;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .gen-meta{
-      font-size:11px;
-      color:var(--muted);
-      display:flex;
-      gap:6px;
+      gap:8px;
       flex-wrap:wrap;
     }
-    .status-pill{
-      padding:2px 8px;
-      border-radius:999px;
-      font-size:11px;
-      border:1px solid var(--border);
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-    }
-    .status-safe{background:#ecfdf5;color:#166534;border-color:#bbf7d0}
-    .status-soon{background:#fffbeb;color:#92400e;border-color:#fed7aa}
-    .status-due{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
 
-    .pill{
-      padding:2px 8px;
-      border-radius:999px;
-      border:1px dashed #e5e7eb;
-      font-size:11px;
-      color:var(--muted);
-    }
-
-    .metrics{
+    .detail-grid{
       display:grid;
-      grid-template-columns:repeat(4, minmax(0,1fr));
+      grid-template-columns:repeat(3,minmax(0,1fr));
       gap:8px;
-      margin:8px 0 12px;
+      margin-bottom:6px;
     }
-    .metric{
-      border-radius:12px;
-      border:1px dashed #e5e7eb;
-      padding:8px 10px;
-      background:#f9fafb;
+
+    .metric-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px;
+      margin:8px 0 10px;
     }
+
+    .metric-card{
+      border-radius:14px;
+      padding:8px 9px;
+      border:1px solid var(--border-soft);
+      background:var(--card2);
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+
     .metric-label{
       font-size:11px;
       color:var(--muted);
     }
+
     .metric-value{
-      margin-top:3px;
-      font-size:16px;
-      font-weight:700;
+      font-size:15px;
+      font-weight:600;
+    }
+
+    .metric-sub{
+      font-size:11px;
+      color:var(--muted);
     }
 
     .progress-wrap{
-      margin:8px 0 0;
+      margin:8px 0 10px;
     }
+
     .progress-label{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
       font-size:11px;
       color:var(--muted);
-      display:flex;
-      justify-content:space-between;
+      margin-bottom:4px;
     }
+
     .progress-bar-out{
-      margin-top:4px;
-      width:100%;
       height:10px;
       border-radius:999px;
-      background:#e5e7eb;
+      background:#020617;
+      border:1px solid var(--border-soft);
       overflow:hidden;
     }
+
     .progress-bar-in{
       height:100%;
-      width:0%;
-      background:var(--safe);
-      transition:width .25s;
-    }
-    .progress-bar-in.soon{background:var(--soon)}
-    .progress-bar-in.due{background:var(--due)}
-
-    .detail-grid{
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:10px;
-      margin-bottom:12px;
-    }
-
-    .row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
+      width:0;
+      background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);
+      border-radius:999px;
+      transition:width 0.2s ease;
     }
 
     .add-reading-grid{
       display:grid;
-      grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:10px;
-      margin-top:8px;
-      align-items:end;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      margin:6px 0 6px;
     }
 
     .err{
-      margin-top:8px;
-      background:#fef2f2;
-      color:#b91c1c;
-      padding:6px 8px;
-      font-size:12px;
-      border-radius:10px;
-      border:1px solid #fecaca;
+      font-size:11px;
+      color:#fecaca;
+      background:#7f1d1d;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid #b91c1c;
+      margin-bottom:6px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+    }
+
+    th,td{
+      border-bottom:1px solid var(--border-soft);
+      padding:4px 6px;
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    thead th{
+      position:sticky;
+      top:0;
+      background:#020617;
+      z-index:1;
     }
 
     .table-wrap{
       border-radius:12px;
-      border:1px solid var(--border);
+      border:1px solid var(--border-soft);
       overflow:auto;
-      max-height:360px;
+      max-height:280px;
+      background:#020617;
     }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:12px;
-      background:#fff;
-    }
-    thead{
-      background:#f9fafb;
-      position:sticky;
-      top:0;
-      z-index:5;
-    }
-    th, td{
-      padding:6px 8px;
-      border-top:1px solid #e5e7eb;
-      text-align:right;
-      vertical-align:middle;
-      white-space:nowrap;
-    }
-    tr.soon-row{background:#fff7ed}
-    tr.due-row{background:#fef2f2}
-    td.actions{
-      display:flex;
-      gap:4px;
-      align-items:center;
-      justify-content:flex-start;
-    }
-    .chip{
+
+    .status-chip{
+      font-size:10px;
+      border-radius:999px;
+      padding:2px 7px;
+      border:1px solid var(--chip-border);
+      background:var(--chip-bg);
       display:inline-flex;
       align-items:center;
       gap:4px;
-      padding:1px 6px;
+    }
+
+    .status-chip .dot{
+      width:6px;
+      height:6px;
       border-radius:999px;
-      border:1px solid #e5e7eb;
-      font-size:11px;
+    }
+
+    .status-chip.safe .dot{background:#22c55e;}
+    .status-chip.soon .dot{background:#eab308;}
+    .status-chip.due .dot{background:#ef4444;}
+
+    .chip{
+      font-size:10px;
+      border-radius:999px;
+      padding:2px 7px;
+      border:1px solid var(--chip-border);
+      background:var(--chip-bg);
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .gen-list{
+      list-style:none;
+      margin:6px 0 0;
+      padding:0;
+      max-height:480px;
+      overflow:auto;
+    }
+
+    .gen-item{
+      border-radius:12px;
+      padding:6px 8px;
+      border:1px solid var(--border-soft);
+      background:rgba(15,23,42,0.9);
+      margin-bottom:6px;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      transition:border 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    }
+
+    .gen-item:hover{
+      border-color:#38bdf8aa;
+      background:rgba(15,23,42,0.95);
+      transform:translateY(-1px);
+    }
+
+    .gen-item.active{
+      border-color:#22c55eaa;
+      box-shadow:0 0 0 1px #22c55e55;
+    }
+
+    .gen-title-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:6px;
+    }
+
+    .gen-title{
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .gen-meta{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      flex-wrap:wrap;
+      font-size:10px;
+      color:var(--muted);
+    }
+
+    .badge{
+      font-size:10px;
+      border-radius:999px;
+      padding:2px 6px;
+      border:1px solid var(--chip-border);
+      background:var(--chip-bg);
+    }
+
+    .badge.green{border-color:#22c55e66;background:#22c55e16;color:#bbf7d0;}
+    .badge.yellow{border-color:#eab30866;background:#eab30816;color:#fef08a;}
+    .badge.red{border-color:#ef4444aa;background:#ef444416;color:#fecaca;}
+
+    .panel-right{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
     }
 
     .tab-header{
       display:flex;
       gap:6px;
-      border-bottom:1px solid #e5e7eb;
-      margin-bottom:10px;
+      margin-bottom:6px;
     }
+
     .tab-btn{
-      border-radius:999px;
-      border:none;
+      flex:1;
+      justify-content:center;
+      font-size:11px;
+      padding:5px 8px;
       background:transparent;
-      padding:6px 10px;
-      font-size:13px;
-      cursor:pointer;
+      border-radius:999px;
+      border:1px solid var(--border-soft);
       color:var(--muted);
     }
+
     .tab-btn.active{
-      background:#111827;
-      color:#fff;
+      background:#1d4ed8;
+      border-color:#2563eb;
+      color:#e5e7eb;
+      box-shadow:0 6px 18px rgba(37,99,235,0.4);
     }
 
     .filters{
       display:flex;
-      flex-wrap:wrap;
       gap:8px;
-      margin-bottom:8px;
       align-items:flex-end;
-    }
-    .filters .field{
-      margin-bottom:0;
-    }
-    .filters .field input{
-      min-width:150px;
+      margin-bottom:6px;
+      flex-wrap:wrap;
     }
 
-    .muted{
+    .report-tab{
+      display:none;
+    }
+
+    .report-tab.active{
+      display:block;
+    }
+
+    .actions{
+      display:flex;
+      gap:4px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn-small{
+      padding:2px 8px;
+      font-size:10px;
+      border-radius:999px;
+      background:#020617;
+      border:1px solid var(--border-soft);
       color:var(--muted);
-      font-size:12px;
     }
 
-    @media (max-width:1150px){
-      main{
-        grid-template-columns:280px minmax(0, 2fr);
-        grid-template-areas:
-          "a b"
-          "a c";
-      }
-      .panel-left{grid-area:a}
-      .panel-center{grid-area:b}
-      .panel-right{grid-area:c}
+    .btn-small:hover{
+      background:#111827;
+      color:var(--text);
+      border-color:#4b5563;
     }
 
-    @media (max-width:900px){
+    .footer{
+      margin-top:10px;
+      font-size:10px;
+      color:var(--muted);
+      text-align:left;
+      opacity:0.7;
+    }
+
+    @media(max-width:1100px){
       main{
         grid-template-columns:1fr;
-        grid-template-areas:
-          "a"
-          "b"
-          "c";
+      }
+      .detail-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .metric-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .add-reading-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+    }
+
+    @media(max-width:700px){
+      header{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .detail-grid{
+        grid-template-columns:1fr;
+      }
+      .metric-grid{
+        grid-template-columns:1fr 1fr;
+      }
+      .add-reading-grid{
+        grid-template-columns:1fr;
       }
     }
   </style>
 </head>
 <body>
-
-  <!-- شاشة تسجيل الدخول -->
-  <div id="login-screen" class="login-wrap">
-    <form id="login-form" class="login-card">
-      <h2>تسجيل الدخول</h2>
-      <p>أدخل اسم المستخدم وكلمة المرور للدخول للنظام.</p>
-      <div class="field">
-        <label>اسم المستخدم</label>
-        <input id="login-username" autocomplete="username" placeholder="Admin">
-      </div>
-      <div class="field">
-        <label>كلمة المرور</label>
-        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••">
-      </div>
-      <button class="btn-primary" type="submit" style="width:100%;margin-top:6px;">دخول</button>
-      <div id="login-error"></div>
-      <p style="margin-top:10px;font-size:11px;color:#6b7280;">
-        Nafithat-Al-Amal
-      </p>
-    </form>
-  </div>
-
-  <!-- التطبيق الرئيسي -->
-  <div id="app" style="display:none;">
+  <div class="app">
     <header>
-      <h1>
-        نظام إدارة ساعات تشغيل المولدات والمصاريف
-        <span>Nafithat Al-Amal</span>
-      </h1>
-      <div class="header-actions">
-        <button id="export-json">تصدير JSON</button>
-
-        <label id="import-json-wrapper" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
-          استيراد JSON
-          <input type="file" id="import-json" accept="application/json" style="display:none">
+      <div>
+        <h1><span class="logo">N</span> نظام إدارة ساعات تشغيل المولدات والمصاريف</h1>
+        <div class="subtitle">متابعة تشغيل المولدات، الصيانة الدورية، الصيانة الطارئة، والمصاريف بدقة وسهولة.</div>
+      </div>
+      <div class="top-actions">
+        <button id="export-json" class="secondary">تصدير JSON</button>
+        <label class="secondary" style="padding:0;overflow:hidden;position:relative;">
+          <input id="import-json" type="file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;">استيراد JSON</span>
         </label>
-
-        <button id="save-local">حفظ البيانات</button>
-        <button id="export-csv" title="ملخص CSV بسيط لجميع المولدات">ملخص CSV</button>
-
-        <span class="muted">المستخدم: <strong id="current-user-label">-</strong></span>
-        <button id="logout-btn" class="logout-btn">تسجيل خروج</button>
+        <button id="export-csv" class="secondary">تصدير CSV</button>
       </div>
     </header>
 
     <main>
-      <!-- لوح المولدات -->
-      <section class="card panel-left">
-        <h2>المولدات</h2>
+      <!-- قائمة المولدات -->
+      <section class="card">
+        <h2>إدارة المولدات</h2>
+        <p class="muted">أضف المولدات وقم بتحديث بياناتها الأساسية.</p>
+
         <div class="field">
-          <label>اسم المولد <small>(سيظهر في القائمة)</small></label>
-          <input id="gen-name" placeholder="مثال: Perkins 250 KVA-1">
+          <label>اسم المولد</label>
+          <input id="gen-name" placeholder="مثال: Tower 1 Isuzu 30KVA">
         </div>
         <div class="field">
-          <label>عداد الخدمة الأخيرة (ساعة)</label>
-          <input id="gen-smr" type="number" min="0" step="1" placeholder="مثال: 2000">
+          <label>عداد الخدمة الأخيرة (SMR)</label>
+          <input id="gen-smr" type="number" min="0" step="1" placeholder="مثال: 4860">
         </div>
         <div class="field">
           <label>تاريخ الخدمة الأخيرة</label>
@@ -528,22 +640,26 @@
           </div>
         </div>
 
-        <div class="metrics">
-          <div class="metric">
-            <div class="metric-label">آخر قراءة عداد</div>
-            <div class="metric-value" id="m-current">-</div>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-label">قراءة العداد الحالية</div>
+            <div id="m-current" class="metric-value">-</div>
+            <div class="metric-sub">آخر قراءة مسجلة</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">ساعات آخر فترة</div>
-            <div class="metric-value" id="m-weekly">-</div>
+          <div class="metric-card">
+            <div class="metric-label">ساعات آخر 7 أيام</div>
+            <div id="m-weekly" class="metric-value">-</div>
+            <div class="metric-sub">إجمالي تشغيل أسبوعي</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">ساعات منذ آخر خدمة</div>
-            <div class="metric-value" id="m-since">-</div>
+          <div class="metric-card">
+            <div class="metric-label">ساعات منذ الخدمة الأخيرة</div>
+            <div id="m-since" class="metric-value">-</div>
+            <div class="metric-sub">إجمالي من تاريخ آخر خدمة</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">الاستحقاق التالي (ساعة)</div>
-            <div class="metric-value" id="m-next">-</div>
+          <div class="metric-card">
+            <div class="metric-label">الاستحقاق القادم</div>
+            <div id="m-next" class="metric-value">-</div>
+            <div class="metric-sub">عدد الساعات المتبقية حتى 200 ساعة</div>
           </div>
         </div>
 
@@ -591,6 +707,56 @@
             <tbody id="log-body"></tbody>
           </table>
         </div>
+
+        <!-- الصيانات الطارئة -->
+        <h3 style="margin-top:18px;">الصيانات الطارئة</h3>
+
+        <div class="add-reading-grid">
+          <div class="field">
+            <label>نوع المولد</label>
+            <input id="em-gen" disabled placeholder="سيتم تعبئة اسم المولد تلقائياً">
+          </div>
+          <div class="field">
+            <label>تاريخ الصيانة الطارئة</label>
+            <input id="em-date" type="date">
+          </div>
+          <div class="field">
+            <label>تكلفة الصيانة الطارئة (IQD)</label>
+            <input id="em-amount" type="number" min="0" step="1" placeholder="مثال: 150000">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>ملاحظة (اختياري)</label>
+          <input id="em-note" placeholder="مثال: تغيير مضخة ديزل (طارئ)">
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px;">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;">
+            <input type="checkbox" id="em-paid" style="width:auto;margin-top:0;">
+            تم دفع المبلغ
+          </label>
+          <button class="btn-primary" id="em-add" style="padding:6px 14px;font-size:12px;">
+            إضافة صيانة طارئة
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>نوع المولد</th>
+                <th>المبلغ (IQD)</th>
+                <th>تم الدفع</th>
+                <th>ملاحظة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="em-body"></tbody>
+          </table>
+        </div>
+
       </section>
 
       <!-- التقارير -->
@@ -614,16 +780,17 @@
           <button id="rep-csv">تصدير CSV</button>
         </div>
 
-        <div id="rep-summary" class="report-tab">
+        <div id="rep-summary" class="report-tab active">
           <p class="muted" style="margin:0 0 6px;">ملخص تشغيل ومصاريف حسب المولد للفترة المحددة.</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>المولد</th>
-                  <th>إجمالي ساعات التشغيل</th>
+                  <th>اسم المولد</th>
+                  <th>عدد القراءات</th>
+                  <th>عدد خدمات الصيانة الدورية</th>
+                  <th>ساعات التشغيل الإجمالية</th>
                   <th>إجمالي المصاريف (IQD)</th>
-                  <th>عدد خدمات الصيانة</th>
                 </tr>
               </thead>
               <tbody id="rep-summary-body"></tbody>
@@ -631,18 +798,18 @@
           </div>
         </div>
 
-        <div id="rep-overview" class="report-tab" style="display:none;">
-          <p class="muted" style="margin:0 0 6px;">تقرير شامل لكل مولد: تشغيل + مصاريف + مؤشرات إضافية للفترة المحددة.</p>
+        <div id="rep-overview" class="report-tab">
+          <p class="muted" style="margin:0 0 6px;">تفاصيل تشغيل وخدمات لكل مولد.</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>المولد</th>
-                  <th>إجمالي ساعات التشغيل</th>
+                  <th>#</th>
+                  <th>اسم المولد</th>
+                  <th>قراءات</th>
+                  <th>خدمات</th>
+                  <th>عدد الساعات الإجمالية</th>
                   <th>إجمالي المصاريف (IQD)</th>
-                  <th>عدد خدمات الصيانة</th>
-                  <th>معدل الكلفة لكل ساعة</th>
-                  <th>آخر تاريخ صيانة</th>
                 </tr>
               </thead>
               <tbody id="rep-overview-body"></tbody>
@@ -650,15 +817,15 @@
           </div>
         </div>
 
-        <div id="rep-expenses" class="report-tab" style="display:none;">
-          <p class="muted" style="margin:0 0 6px;">تفصيل جميع المصاريف على مستوى المولد والخدمة.</p>
+        <div id="rep-expenses" class="report-tab">
+          <p class="muted" style="margin:0 0 6px;">كل المصاريف (الصيانة الدورية + الصيانات الطارئة) حسب المولد.</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>المولد</th>
-                  <th>تاريخ الخدمة</th>
-                  <th>قراءة العداد</th>
+                  <th>اسم المولد</th>
+                  <th>التاريخ</th>
+                  <th>العداد</th>
                   <th>المبلغ</th>
                   <th>العملة</th>
                   <th>ملاحظة</th>
@@ -670,49 +837,29 @@
         </div>
       </section>
     </main>
+
+    <div class="footer">
+      Nifthat Al-Amal &copy; 2025 - منصة إدارة المولدات (إصدار متقدم يدوي بالكامل بدون خادم).
+    </div>
   </div>
 
   <script>
-    // ====== الحالة العامة ======
-    let state = { generators: [] };
-    let selectedId = null;
-    const LOCAL_KEY = "generatorSystemData_v1";
+    // اختصار لجلب العناصر
+    const $ = (id)=>document.getElementById(id);
 
-    // 🔧 مفتاح تخزين جلسة المستخدم في المتصفح
-    const USER_STORAGE_KEY = "generatorSystemUser_v1";
-
-    // ====== مستخدمين ======
-    const USERS = [
-      {username:"Sameer", password:"Sameer1234", role:"admin"},
-      {username:"Jabbar", password:"1234", role:"user"}
-    ];
-    let currentUser = null;
-
-    // ====== DOM helper ======
-    const $ = (id) => document.getElementById(id);
-
-    // عناصر الدخول
-    const loginScreen = $("login-screen");
-    const appRoot = $("app");
-    const loginForm = $("login-form");
-    const loginUserInput = $("login-username");
-    const loginPassInput = $("login-password");
-    const loginError = $("login-error");
-    const currentUserLabel = $("current-user-label");
-    const logoutBtn = $("logout-btn");
-
-    // عناصر النظام
-    const genName   = $("gen-name");
-    const genSmr    = $("gen-smr");
-    const genDate   = $("gen-date");
+    // عناصر واجهة المولدات
+    const genName = $("gen-name");
+    const genSmr = $("gen-smr");
+    const genDate = $("gen-date");
     const addGenBtn = $("add-gen");
-    const genList   = $("gen-list");
+    const genList = $("gen-list");
     const deleteGenBtn = $("delete-gen");
 
+    // عناصر تفاصيل المولد
+    const detailNamePill = $("detail-name-pill");
     const dName = $("d-name");
     const dSmr  = $("d-smr");
     const dDate = $("d-date");
-    const detailNamePill = $("detail-name-pill");
 
     const mCurrent = $("m-current");
     const mWeekly  = $("m-weekly");
@@ -727,6 +874,15 @@
     const rErr = $("r-err");
     const logBody = $("log-body");
 
+    // عناصر الصيانة الطارئة
+    const emGen   = $("em-gen");
+    const emDate  = $("em-date");
+    const emAmount= $("em-amount");
+    const emNote  = $("em-note");
+    const emPaid  = $("em-paid");
+    const emAdd   = $("em-add");
+    const emBody  = $("em-body");
+
     const repFrom = $("rep-from");
     const repTo   = $("rep-to");
     const repRefresh = $("rep-refresh");
@@ -737,149 +893,160 @@
 
     const expJSON = $("export-json");
     const impJSON = $("import-json");
-    const importJSONWrapper = $("import-json-wrapper");
-    const saveLocalBtn = $("save-local");
     const expCSV  = $("export-csv");
-
-    // ====== صلاحيات ======
-    function isAdmin(){
-      return currentUser && currentUser.role === "admin";
-    }
-
-    function applyRoleUI(){
-      if(!currentUser) return;
-      currentUserLabel.textContent = currentUser.username + (isAdmin() ? " (مشرف)" : "");
-      deleteGenBtn.style.display = isAdmin() ? "" : "none";
-      expJSON.style.display = isAdmin() ? "" : "none";
-      importJSONWrapper.style.display = isAdmin() ? "inline-flex" : "none";
-    }
-
-    // ====== تسجيل الدخول ======
-    loginForm.addEventListener("submit", (e)=>{
-      e.preventDefault();
-      const u = loginUserInput.value.trim();
-      const p = loginPassInput.value;
-      const found = USERS.find(x=>x.username===u && x.password===p);
-      if(!found){
-        loginError.style.display = "block";
-        loginError.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
-        return;
-      }
-
-      currentUser = {username:found.username, role:found.role};
-
-      // تخزين المستخدم في المتصفح حتى بعد الريفريش
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
-
-      loginError.style.display = "none";
-      loginScreen.style.display = "none";
-      appRoot.style.display = "block";
-      applyRoleUI();
-    });
-
-    // ====== تسجيل الخروج ======
-    logoutBtn.addEventListener("click", ()=>{
-      currentUser = null;
-      // إزالة المستخدم من التخزين
-      localStorage.removeItem(USER_STORAGE_KEY);
-
-      appRoot.style.display = "none";
-      loginScreen.style.display = "flex";
-      loginUserInput.value = "";
-      loginPassInput.value = "";
-      currentUserLabel.textContent = "-";
-    });
 
     // ====== util ======
     function todayStr(){
-      return new Date().toISOString().slice(0,10);
+      const d = new Date();
+      const m = String(d.getMonth()+1).padStart(2,"0");
+      const day = String(d.getDate()).padStart(2,"0");
+      return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    function parseDate(str){
+      const [y,m,d] = str.split("-").map(Number);
+      return new Date(y, m-1, d);
     }
 
     function byDateAsc(a,b){
-      return a.date.localeCompare(b.date);
+      if(a.date===b.date) return 0;
+      return a.date < b.date ? -1 : 1;
     }
 
-    function currentMeter(gen){
-      const sorted = (gen.readings||[]).slice().sort(byDateAsc);
-      if(!sorted.length) return null;
-      return Number(sorted[sorted.length-1].meter);
+    function sum(arr,fn){
+      let s = 0;
+      for(const x of arr) s += fn(x)||0;
+      return s;
     }
 
-    function lastWeeklyHours(gen){
-      const sorted = (gen.readings||[]).slice().sort(byDateAsc);
-      if(sorted.length < 2) return null;
-      const last = sorted[sorted.length-1];
-      const prev = sorted[sorted.length-2];
-      return Number(last.meter) - Number(prev.meter);
+    // ====== البيانات ======
+    const state = {
+      generators: [],
+    };
+
+    let selectedId = null;
+
+    // تحميل بيانات افتراضية (إن وجدت ضمن generators.json مضمنة)
+    (async()=>{
+      try{
+        // لا شيء هنا، يمكن حقن بيانات افتراضية لاحقاً إن أردت
+      }catch(e){
+        console.error(e);
+      }
+    })();
+
+    // ====== إدارة المولدات ======
+    function renderGenList(){
+      genList.innerHTML = "";
+      if(!state.generators.length){
+        const li = document.createElement("li");
+        li.className = "muted";
+        li.style.fontSize = "11px";
+        li.textContent = "لا توجد مولدات بعد. أضف مولد من الأعلى.";
+        genList.appendChild(li);
+        return;
+      }
+
+      const gens = state.generators.slice();
+
+      gens.forEach(gen=>{
+        const li = document.createElement("li");
+        li.className = "gen-item" + (gen.id===selectedId ? " active" : "");
+        li.dataset.id = gen.id;
+
+        const lastReading = (gen.readings||[]).slice().sort(byDateAsc).slice(-1)[0];
+        const lastService = lastServiceInfo(gen);
+
+        const meterNow = lastReading ? Number(lastReading.meter) : Number(gen.lastServiceMeter)||0;
+        const since = Math.max(0, meterNow - Number(lastService.meter||0));
+        const remain = Math.max(0,200 - since);
+        const pct = Math.min(100, Math.round((since/200)*100));
+
+        let statusClass = "safe";
+        let statusLabel = "آمن";
+        if(since >= 171 && since < 200){
+          statusClass = "soon";
+          statusLabel = "قرب الاستحقاق";
+        }else if(since >= 200){
+          statusClass = "due";
+          statusLabel = "استحقاق صيانة";
+        }
+
+        const statusSpan = document.createElement("span");
+        statusSpan.className = `status-pill ${statusClass}`;
+        statusSpan.innerHTML = `<span class="pill-dot"></span>${statusLabel}`;
+
+        const titleRow = document.createElement("div");
+        titleRow.className = "gen-title-row";
+
+        const title = document.createElement("div");
+        title.className = "gen-title";
+        title.textContent = gen.name || "مولد بدون اسم";
+
+        const badge = document.createElement("span");
+        badge.className = "badge " + (statusClass==="safe"?"green":statusClass==="soon"?"yellow":"red");
+        badge.textContent = since ? `${since} ساعة منذ الخدمة` : "لا توجد خدمة مسجلة";
+
+        titleRow.appendChild(title);
+        titleRow.appendChild(statusSpan);
+
+        const meta = document.createElement("div");
+        meta.className = "gen-meta";
+
+        meta.innerHTML = `
+          <span>آخر قراءة: ${lastReading ? lastReading.meter : (gen.lastServiceMeter||0)} ساعة</span>
+          <span>استحقاق بعد: ${remain} ساعة</span>
+        `;
+
+        li.appendChild(titleRow);
+        li.appendChild(meta);
+        li.appendChild(badge);
+
+        genList.appendChild(li);
+      });
     }
 
     function lastServiceInfo(gen){
       const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
       if(hist.length){
         const last = hist[hist.length-1];
-        return {date:last.date, meter:Number(last.meter)};
+        return {date:last.date, meter:Number(last.meter)||0};
       }
-      return {
-        date: gen.lastServiceDate || null,
-        meter: gen.lastServiceMeter != null ? Number(gen.lastServiceMeter) : 0
-      };
+      return {date:gen.lastServiceDate||null, meter:Number(gen.lastServiceMeter)||0};
     }
 
-    function hoursSinceService(gen){
-      const cm = currentMeter(gen);
-      if(cm == null) return 0;
-      const svc = lastServiceInfo(gen);
-      return Math.max(0, cm - (svc.meter || 0));
-    }
+    function recalcDetail(gen){
+      if(!gen) return;
+      const lastReading = (gen.readings||[]).slice().sort(byDateAsc).slice(-1)[0];
+      const lastService = lastServiceInfo(gen);
+      const currentMeter = lastReading ? Number(lastReading.meter) : Number(lastService.meter||0);
+      const since = Math.max(0, currentMeter - Number(lastService.meter||0));
+      const remain = Math.max(0,200 - since);
+      const pct = Math.min(100, Math.round((since/200)*100));
 
-    function nextDueAt(gen){
-      const svc = lastServiceInfo(gen);
-      const base = svc.meter || 0;
-      return base + 200;
-    }
-
-    function statusObj(gen){
-      const since = hoursSinceService(gen);
-      if(since >= 200) return {label:"متأخرة", class:"status-due"};
-      if(since >= 160) return {label:"قرب الاستحقاق", class:"status-soon"};
-      return {label:"آمنة", class:"status-safe"};
-    }
-
-    // ====== عرض قائمة المولدات ======
-    function renderGenList(){
-      genList.innerHTML = "";
-      if(!state.generators.length){
-        genList.innerHTML = "<li class='muted' style='list-style:none;padding:2px 0;'>لم يتم إضافة أي مولد بعد.</li>";
-        return;
+      mCurrent.textContent = currentMeter ? currentMeter : "-";
+      mSince.textContent   = since ? since : "-";
+      mNext.textContent    = remain ? remain : "-";
+      mPercent.textContent = pct + "%";
+      mBar.style.width = pct + "%";
+      mBar.className = "progress-bar-in";
+      if(since >= 171 && since < 200){
+        mBar.classList.add("soon");
+      }else if(since >= 200){
+        mBar.classList.add("due");
       }
-      state.generators.forEach(gen=>{
-        const li = document.createElement("li");
-        li.className = "gen-item" + (gen.id===selectedId ? " active" : "");
-        li.dataset.id = gen.id;
-
-        const st = statusObj(gen);
-        const cm = currentMeter(gen);
-        const since = hoursSinceService(gen);
-
-        li.innerHTML = `
-          <div class="gen-item-header">
-            <div class="gen-name" title="${gen.name}">${gen.name}</div>
-            <span class="status-pill ${st.class}">
-              <span style="width:8px;height:8px;border-radius:999px;background:currentColor;"></span>
-              ${st.label}
-            </span>
-          </div>
-          <div class="gen-meta">
-            <span>SMR: ${gen.lastServiceMeter ?? 0}</span>
-            <span>آخر قراءة: ${cm ?? "-"}</span>
-            <span>منذ الخدمة: ${since}</span>
-          </div>
-        `;
-        genList.appendChild(li);
-      });
     }
 
-    // ====== عرض تفاصيل المولد ======
+    function calcWeekly(gen){
+      const readings = (gen.readings||[]).slice().sort(byDateAsc);
+      if(readings.length < 2) return 0;
+      const last = readings[readings.length-1];
+      const weekAgo = new Date(parseDate(last.date).getTime() - 7*24*60*60*1000);
+      const prev = readings.slice().reverse().find(r=>parseDate(r.date) <= weekAgo);
+      if(!prev) return 0;
+      return Math.max(0, Number(last.meter)-Number(prev.meter));
+    }
+
     function renderDetail(){
       const gen = state.generators.find(g=>g.id===selectedId);
       if(!gen){
@@ -895,32 +1062,41 @@
         mBar.style.width = "0%";
         mBar.className = "progress-bar-in";
         logBody.innerHTML = "";
+        if(emGen && emBody){
+          emGen.value = "";
+          emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا يوجد مولد محدد.</td></tr>";
+        }
         return;
       }
 
-      detailNamePill.textContent = gen.name;
+      detailNamePill.textContent = gen.name || "مولد بدون اسم";
       dName.value = gen.name || "";
-      dSmr.value  = gen.lastServiceMeter != null ? gen.lastServiceMeter : "";
+      dSmr.value = gen.lastServiceMeter || "";
       dDate.value = gen.lastServiceDate || "";
 
-      const cm = currentMeter(gen);
-      const weekly = lastWeeklyHours(gen);
-      const since = hoursSinceService(gen);
-      const next  = nextDueAt(gen);
+      const lastReading = (gen.readings||[]).slice().sort(byDateAsc).slice(-1)[0];
+      const lastService = lastServiceInfo(gen);
+      const currentMeter = lastReading ? Number(lastReading.meter) : Number(lastService.meter||0);
+      const since = Math.max(0, currentMeter - Number(lastService.meter||0));
+      const remain = Math.max(0,200 - since);
+      const pct = Math.min(100, Math.round((since/200)*100));
+      const weekly = calcWeekly(gen);
 
-      mCurrent.textContent = cm != null ? cm : "-";
-      mWeekly.textContent  = weekly != null ? weekly : "-";
-      mSince.textContent   = since;
-      mNext.textContent    = next;
-
-      const p = Math.min(100, Math.floor((since/200)*100));
-      mPercent.textContent = p + "%";
-      mBar.style.width = p + "%";
+      mCurrent.textContent = currentMeter ? currentMeter : "-";
+      mWeekly.textContent  = weekly ? weekly : "-";
+      mSince.textContent   = since ? since : "-";
+      mNext.textContent    = remain ? remain : "-";
+      mPercent.textContent = pct + "%";
+      mBar.style.width = pct + "%";
       mBar.className = "progress-bar-in";
-      if(since >= 200) mBar.classList.add("due");
-      else if(since >= 160) mBar.classList.add("soon");
+      if(since >= 171 && since < 200){
+        mBar.classList.add("soon");
+      }else if(since >= 200){
+        mBar.classList.add("due");
+      }
 
       renderLog(gen);
+      renderEmergency(gen);
     }
 
     // ====== سجل القراءات ======
@@ -928,6 +1104,7 @@
       logBody.innerHTML = "";
       const readings = (gen.readings||[]).slice().sort(byDateAsc);
 
+      // baseline لكل قراءة
       function baselineForDate(dateStr){
         const hist = (gen.serviceHistory||[]).slice().sort(byDateAsc);
         let base = null;
@@ -945,14 +1122,18 @@
         const svc = (gen.serviceHistory||[]).find(h=>h.date===r.date && Number(h.meter)===Number(r.meter));
         const base = baselineForDate(r.date);
         const since = Math.max(0, Number(r.meter) - base);
-        const next = base + 200;
-        const prev = readings[idx-1];
-        const weekly = prev ? (Number(r.meter) - Number(prev.meter)) : "";
+        const remain = Math.max(0, 200 - since);
+
+        // حساب ساعات هذه الفترة
+        let weekly = 0;
+        if(idx === 0){
+          weekly = since;
+        }else{
+          const prev = readings[idx-1];
+          weekly = Math.max(0, Number(r.meter)-Number(prev.meter));
+        }
 
         const tr = document.createElement("tr");
-        const st = since >= 200 ? "due-row" : (since>=160 ? "soon-row" : "");
-        if(st) tr.classList.add(st);
-
         const costTxt = svc && svc.cost != null ? `${svc.cost} ${svc.currency || ""}` : "-";
         const noteTxt = svc && svc.costNote ? svc.costNote : "";
 
@@ -961,7 +1142,7 @@
           <td>${r.meter}</td>
           <td>${weekly}</td>
           <td>${since}</td>
-          <td>${next}</td>
+          <td>${remain}</td>
           <td>${svc ? "<span class='chip'>خدمة مكتملة</span>" : ""}</td>
           <td>${costTxt}${noteTxt ? "<br><span class='muted'>"+noteTxt+"</span>" : ""}</td>
           <td class="actions">
@@ -978,22 +1159,57 @@
       }
     }
 
+    // ====== الصيانات الطارئة ======
+    function renderEmergency(gen){
+      if(!emGen || !emBody) return;
+
+      if(!gen){
+        emGen.value = "";
+        emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا يوجد مولد محدد.</td></tr>";
+        return;
+      }
+
+      emGen.value = gen.name || "";
+
+      const list = (gen.emergency || []);
+      emBody.innerHTML = "";
+
+      if(!list.length){
+        emBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد صيانات طارئة مسجلة لهذا المولد.</td></tr>";
+        return;
+      }
+
+      const rows = list.slice().sort((a,b)=> (a.date||"").localeCompare(b.date||""));
+      rows.forEach(e=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${e.date || ""}</td>
+          <td>${gen.name}</td>
+          <td>${e.amount ?? ""}</td>
+          <td>${e.paid ? "✅" : "❌"}</td>
+          <td>${e.note || ""}</td>
+          <td class="actions">
+            <button class="btn-small" data-em-action="toggle" data-id="${e.id}" style="font-size:11px;padding:3px 7px;">تبديل الدفع</button>
+            <button class="btn-small" data-em-action="del" data-id="${e.id}" style="font-size:11px;padding:3px 7px;">🗑</button>
+          </td>
+        `;
+        emBody.appendChild(tr);
+      });
+    }
+
     // ====== رسائل خطأ بسيطة ======
     function showError(el, msg){
       el.textContent = msg;
       el.style.display = "block";
     }
+
     function hideError(el){
-      el.style.display = "none";
       el.textContent = "";
+      el.style.display = "none";
     }
 
-    // ====== إضافة مولد (أدمن فقط) ======
+    // ====== إضافة مولد ======
     addGenBtn.addEventListener("click", ()=>{
-      if(!isAdmin()){
-        alert("إضافة المولدات متاحة للمشرف فقط.");
-        return;
-      }
       if(!genName.value.trim() || !genSmr.value || !genDate.value){
         alert("رجاءً أكمل بيانات المولد (الاسم - العداد - التاريخ).");
         return;
@@ -1004,7 +1220,8 @@
         lastServiceMeter: Number(genSmr.value),
         lastServiceDate: genDate.value,
         readings: [],
-        serviceHistory: []
+        serviceHistory: [],
+        emergency: []
       };
       state.generators.unshift(g);
       selectedId = g.id;
@@ -1028,46 +1245,46 @@
       buildReports();
     });
 
-    // ====== حذف مولد (أدمن فقط) ======
-    deleteGenBtn.addEventListener("click", ()=>{
-      if(!isAdmin()){
-        alert("حذف المولدات متاح للمشرف فقط.");
-        return;
-      }
+    // ====== تحديث بيانات المولد من الحقول ======
+    dName.addEventListener("change", ()=>{
       const gen = state.generators.find(g=>g.id===selectedId);
-      if(!gen){
-        alert("لا يوجد مولد محدد.");
-        return;
-      }
-      if(!confirm("هل تريد حذف هذا المولد بكل بياناته بالتأكيد؟")) return;
-      state.generators = state.generators.filter(g=>g.id!==selectedId);
-      selectedId = state.generators[0]?.id || null;
+      if(!gen) return;
+      gen.name = dName.value.trim() || gen.name;
       renderGenList();
       renderDetail();
       buildReports();
     });
 
-    // ====== تعديل بيانات المولد من التفاصيل ======
-    dName.addEventListener("change", ()=>{
-      const gen = state.generators.find(g=>g.id===selectedId);
-      if(!gen) return;
-      gen.name = dName.value.trim();
-      renderGenList();
-      renderDetail();
-      buildReports();
-    });
     dSmr.addEventListener("change", ()=>{
       const gen = state.generators.find(g=>g.id===selectedId);
       if(!gen) return;
-      gen.lastServiceMeter = Number(dSmr.value||0);
+      const v = Number(dSmr.value||0);
+      gen.lastServiceMeter = v;
       renderGenList();
       renderDetail();
       buildReports();
     });
+
     dDate.addEventListener("change", ()=>{
       const gen = state.generators.find(g=>g.id===selectedId);
       if(!gen) return;
-      gen.lastServiceDate = dDate.value;
+      gen.lastServiceDate = dDate.value || gen.lastServiceDate;
+      renderGenList();
+      renderDetail();
+      buildReports();
+    });
+
+    // ====== حذف المولد ======
+    deleteGenBtn.addEventListener("click", ()=>{
+      if(!selectedId){
+        alert("لا يوجد مولد محدد للحذف.");
+        return;
+      }
+      const gen = state.generators.find(g=>g.id===selectedId);
+      if(!gen) return;
+      if(!confirm(`هل تريد حذف المولد "${gen.name}" وكل بياناته؟`)) return;
+      state.generators = state.generators.filter(g=>g.id!==selectedId);
+      selectedId = state.generators[0]?.id || null;
       renderGenList();
       renderDetail();
       buildReports();
@@ -1088,6 +1305,7 @@
       }
       hideError(rErr);
 
+      // منع تكرار نفس التاريخ+العداد
       const exists = (gen.readings||[]).some(x=>x.date===d && Number(x.meter)===m);
       if(exists){
         showError(rErr,"هذه القراءة موجودة بالفعل.");
@@ -1102,7 +1320,7 @@
       buildReports();
     });
 
-    // ====== إجراءات على السجل (خدمة / مصروف / حذف) ======
+    // ====== تعامل مع أزرار سجل القراءات ======
     logBody.addEventListener("click", (e)=>{
       const btn = e.target.closest("button[data-action]");
       if(!btn) return;
@@ -1113,29 +1331,21 @@
       if(!gen) return;
 
       if(action === "del"){
-        if(!isAdmin()){
-          alert("حذف القراءة متاح للمشرف فقط.");
-          return;
-        }
         if(!confirm("حذف هذه القراءة؟")) return;
         gen.readings = (gen.readings||[]).filter(r=>!(r.date===d && Number(r.meter)===m));
       }
 
       if(action === "mark"){
-        if(!isAdmin()){
-          alert("تعيين/إلغاء الخدمة متاح للمشرف فقط.");
-          return;
-        }
         if(!gen.serviceHistory) gen.serviceHistory = [];
         let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
         if(svc){
           if(confirm("هذه القراءة مسجلة كخدمة. هل تريد إلغاء إشارة الخدمة؟")){
             gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===m));
           }
-        } else {
-          if(confirm("تعيين هذه القراءة كخدمة مكتملة؟")){
-            gen.serviceHistory.push({date:d, meter:m});
-          }
+        }else{
+          if(!confirm("تعيين هذه القراءة كخدمة صيانة دورية؟")) return;
+          svc = {date:d, meter:m, cost:null, currency:"IQD", costNote:""};
+          gen.serviceHistory.push(svc);
         }
       }
 
@@ -1143,12 +1353,8 @@
         if(!gen.serviceHistory) gen.serviceHistory = [];
         let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
         if(!svc){
-          if(!isAdmin()){
-            alert("لا يمكنك إنشاء خدمة جديدة، اطلب من الأدمن تسجيل الخدمة أولاً.");
-            return;
-          }
-          if(!confirm("لم تُسجّل هذه القراءة كخدمة بعد. تعيينها كخدمة ثم إضافة مصروف؟")) return;
-          svc = {date:d, meter:m};
+          if(!confirm("لا يوجد سجل خدمة لهذه القراءة، هل تريد إنشاء خدمة جديدة وإضافة مصروف لها؟")) return;
+          svc = {date:d, meter:m, cost:null, currency:"IQD", costNote:""};
           gen.serviceHistory.push(svc);
         }
 
@@ -1163,370 +1369,96 @@
         const valNote = prompt("أدخل ملاحظة للمصروف (اختياري):", currentNote);
         if(valNote === null) return;
 
-        svc.cost = valCost.trim() ? Number(valCost.trim()) : null;
-        svc.currency = valCurrency.trim().toUpperCase();
-        svc.costNote = valNote.trim();
+        svc.cost = valCost ? Number(valCost) : null;
+        svc.currency = valCurrency || "IQD";
+        svc.costNote = valNote || "";
+
       }
 
+      renderGenList();
       renderDetail();
       buildReports();
     });
 
-    // ====== التقارير ======
-    function parseRange(){
-      let from = repFrom.value || "0000-01-01";
-      let to   = repTo.value || "9999-12-31";
-      return {from, to};
-    }
-
-    function buildSummaryReport(){
-      const {from, to} = parseRange();
-      const rows = [];
-
-      state.generators.forEach(gen=>{
-        const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
-        let hours = 0;
-        if(readings.length>=2){
-          const first = readings[0];
-          const last  = readings[readings.length-1];
-          hours = Number(last.meter) - Number(first.meter);
-        }
-
-        let costIQD = 0;
-        let costUSD = 0;
-        const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
-        services.forEach(s=>{
-          if(s.cost != null){
-            if((s.currency||"").toUpperCase()==="USD") costUSD += Number(s.cost);
-            else costIQD += Number(s.cost);
-          }
-        });
-
-        rows.push({
-          name:gen.name,
-          hours,
-          costIQD,
-          costUSD,
-          svcCount:services.length
-        });
-      });
-
-      return rows;
-    }
-
-    function buildOverviewReport(){
-      const {from, to} = parseRange();
-      const rows = [];
-
-      state.generators.forEach(gen=>{
-        const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).sort(byDateAsc);
-        let hours = 0;
-        if(readings.length>=2){
-          const first = readings[0];
-          const last  = readings[readings.length-1];
-          hours = Number(last.meter) - Number(first.meter);
-        }
-
-        let costIQD = 0;
-        const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
-        let lastServiceDate = "";
-        services.forEach(s=>{
-          if(s.cost != null){
-            if((s.currency||"").toUpperCase()==="USD") return;
-            costIQD += Number(s.cost);
-          }
-          if(!lastServiceDate || s.date>lastServiceDate){
-            lastServiceDate = s.date;
-          }
-        });
-
-        let avgPerHour = 0;
-        if(hours>0){
-          avgPerHour = costIQD / hours;
-        }
-
-        rows.push({
-          name:gen.name,
-          hours,
-          costIQD,
-          svcCount:services.length,
-          avgPerHour,
-          lastServiceDate
-        });
-      });
-
-      return rows;
-    }
-
-    function buildExpensesReport(){
-      const {from, to} = parseRange();
-      const rows = [];
-      state.generators.forEach(gen=>{
-        (gen.serviceHistory||[]).forEach(s=>{
-          if(s.date<from || s.date>to) return;
-          if(s.cost == null) return;
-          rows.push({
-            gen:gen.name,
-            date:s.date,
-            meter:s.meter,
-            cost:s.cost,
-            currency:(s.currency||"").toUpperCase(),
-            note:s.costNote||""
-          });
-        });
-      });
-      rows.sort((a,b)=> a.gen.localeCompare(b.gen) || a.date.localeCompare(b.date));
-      return rows;
-    }
-
-    function renderSummaryReport(){
-      const rows = buildSummaryReport();
-      repSummaryBody.innerHTML = "";
-      if(!rows.length){
-        repSummaryBody.innerHTML = "<tr><td colspan='4' class='muted'>لا توجد بيانات في الفترة المحددة.</td></tr>";
-        return;
-      }
-      let totalHours = 0;
-      let totalIQD = 0;
-      let totalSvc = 0;
-
-      rows.forEach(r=>{
-        totalHours += Number(r.hours) || 0;
-        totalIQD += Number(r.costIQD) || 0;
-        totalSvc += Number(r.svcCount) || 0;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.name}</td>
-          <td>${r.hours}</td>
-          <td>${r.costIQD}</td>
-          <td>${r.svcCount}</td>
-        `;
-        repSummaryBody.appendChild(tr);
-      });
-
-      const totalRow = document.createElement("tr");
-      totalRow.style.background = "#f9fafb";
-      totalRow.style.fontWeight = "700";
-      totalRow.innerHTML = `
-        <td>الإجمالي الكلي</td>
-        <td>${totalHours}</td>
-        <td>${totalIQD}</td>
-        <td>${totalSvc}</td>
-      `;
-      repSummaryBody.appendChild(totalRow);
-    }
-
-    function renderExpensesReport(){
-      const rows = buildExpensesReport();
-      repExpensesBody.innerHTML = "";
-      if(!rows.length){
-        repExpensesBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد مصاريف في الفترة المحددة.</td></tr>";
-        return;
-      }
-      rows.forEach(r=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.gen}</td>
-          <td>${r.date}</td>
-          <td>${r.meter}</td>
-          <td>${r.cost}</td>
-          <td>${r.currency}</td>
-          <td>${r.note}</td>
-        `;
-        repExpensesBody.appendChild(tr);
-      });
-    }
-
-    function renderOverviewReport(){
-      const rows = buildOverviewReport();
-      repOverviewBody.innerHTML = "";
-      if(!rows.length){
-        repOverviewBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد بيانات في الفترة المحددة.</td></tr>";
+    // إضافة صيانة طارئة
+    emAdd?.addEventListener("click", ()=>{
+      const gen = state.generators.find(g=>g.id===selectedId);
+      if(!gen){
+        alert("رجاءً اختر مولد أولاً قبل إضافة صيانة طارئة.");
         return;
       }
 
-      let totalHours = 0;
-      let totalIQD = 0;
-      let totalSvc = 0;
+      const amount = Number(emAmount.value || 0);
+      const date   = emDate.value || todayStr();
+      const note   = emNote.value.trim();
+      const paid   = !!emPaid.checked;
 
-      rows.forEach(r=>{
-        totalHours += Number(r.hours) || 0;
-        totalIQD += Number(r.costIQD) || 0;
-        totalSvc += Number(r.svcCount) || 0;
+      if(!amount || amount <= 0){
+        alert("الرجاء إدخال مبلغ صحيح للصيانة الطارئة.");
+        return;
+      }
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.name}</td>
-          <td>${r.hours}</td>
-          <td>${r.costIQD}</td>
-          <td>${r.svcCount}</td>
-          <td>${r.avgPerHour ? r.avgPerHour.toFixed(2) : 0}</td>
-          <td>${r.lastServiceDate || ""}</td>
-        `;
-        repOverviewBody.appendChild(tr);
+      if(!gen.emergency) gen.emergency = [];
+
+      gen.emergency.push({
+        id: crypto.randomUUID(),
+        date,
+        amount,
+        paid,
+        note
       });
 
-      const totalRow = document.createElement("tr");
-      totalRow.style.background = "#f9fafb";
-      totalRow.style.fontWeight = "700";
-      const globalAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
-      totalRow.innerHTML = `
-        <td>الإجمالي الكلي</td>
-        <td>${totalHours}</td>
-        <td>${totalIQD}</td>
-        <td>${totalSvc}</td>
-        <td>${globalAvg}</td>
-        <td></td>
-      `;
-      repOverviewBody.appendChild(totalRow);
-    }
+      // تنظيف الحقول
+      emAmount.value = "";
+      emNote.value   = "";
+      emPaid.checked = false;
 
-    function buildReports(){
-      renderSummaryReport();
-      renderOverviewReport();
-      renderExpensesReport();
-    }
-
-    repRefresh.addEventListener("click", ()=>{
+      renderEmergency(gen);
       buildReports();
     });
 
-    // ====== تصدير تقارير التبويبات CSV ======
-    repCSV.addEventListener("click", ()=>{
-      const activeTabBtn = document.querySelector(".tab-btn.active");
-      const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : "summary";
-      const {from, to} = parseRange();
+    // إجراءات جدول الصيانة الطارئة: تبديل حالة الدفع / حذف
+    emBody?.addEventListener("click",(e)=>{
+      const btn = e.target.closest("button[data-em-action]");
+      if(!btn) return;
 
-      let lines = [];
-      lines.push(`الفترة من: ${from === "0000-01-01" ? "البداية" : from} إلى: ${to === "9999-12-31" ? "النهاية" : to}`);
+      const gen = state.generators.find(g=>g.id===selectedId);
+      if(!gen || !gen.emergency) return;
 
-      if(activeTab === "summary"){
-        const rows = buildSummaryReport();
-        const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة"];
-        lines.push(header.join(","));
+      const id = btn.dataset.id;
+      const action = btn.dataset.emAction;
+      const item = gen.emergency.find(x=>x.id===id);
+      if(!item) return;
 
-        let totalHours = 0;
-        let totalIQD = 0;
-        let totalSvc = 0;
-
-        rows.forEach(r=>{
-          totalHours += Number(r.hours) || 0;
-          totalIQD += Number(r.costIQD) || 0;
-          totalSvc += Number(r.svcCount) || 0;
-
-          lines.push([
-            `"${String(r.name||"").replace(/"/g,'""')}"`,
-            r.hours,
-            r.costIQD,
-            r.svcCount
-          ].join(","));
-        });
-
-        lines.push([
-          `"الإجمالي الكلي"`,
-          totalHours,
-          totalIQD,
-          totalSvc
-        ].join(","));
-      } else if(activeTab === "overview"){
-        const rows = buildOverviewReport();
-        const header = ["المولد","إجمالي ساعات التشغيل","إجمالي المصاريف (IQD)","عدد خدمات الصيانة","معدل الكلفة لكل ساعة","آخر تاريخ صيانة"];
-        lines.push(header.join(","));
-
-        let totalHours = 0;
-        let totalIQD = 0;
-        let totalSvc = 0;
-
-        rows.forEach(r=>{
-          totalHours += Number(r.hours) || 0;
-          totalIQD += Number(r.costIQD) || 0;
-          totalSvc += Number(r.svcCount) || 0;
-
-          lines.push([
-            `"${String(r.name||"").replace(/"/g,'""')}"`,
-            r.hours,
-            r.costIQD,
-            r.svcCount,
-            r.avgPerHour ? r.avgPerHour.toFixed(2) : 0,
-            `"${String(r.lastServiceDate||"").replace(/"/g,'""')}"`,
-          ].join(","));
-        });
-
-        const globalAvg = totalHours>0 ? (totalIQD/totalHours).toFixed(2) : 0;
-        lines.push([
-          `"الإجمالي الكلي"`,
-          totalHours,
-          totalIQD,
-          totalSvc,
-          globalAvg,
-          ""
-        ].join(","));
-      } else {
-        const rows = buildExpensesReport();
-        const header = ["المولد","تاريخ الخدمة","قراءة العداد","المبلغ","العملة","ملاحظة"];
-        lines.push(header.join(","));
-
-        rows.forEach(r=>{
-          lines.push([
-            `"${String(r.gen||"").replace(/"/g,'""')}"`,
-            r.date,
-            r.meter,
-            r.cost,
-            r.currency,
-            `"${String(r.note||"").replace(/"/g,'""')}"`,
-          ].join(","));
-        });
+      if(action === "toggle"){
+        item.paid = !item.paid;
       }
 
-      const csvContent = "\ufeff" + lines.join("\n");
-      const blob = new Blob([csvContent],{type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      let fnameBase;
-      if(activeTab === "summary") fnameBase = "generators-summary-report";
-      else if(activeTab === "overview") fnameBase = "generators-overview-report";
-      else fnameBase = "generators-expenses-report";
-      a.href = url;
-      a.download = fnameBase + ".csv";
-      a.click();
-      URL.revokeObjectURL(url);
+      if(action === "del"){
+        if(!confirm("هل تريد حذف هذه الصيانة الطارئة؟")) return;
+        gen.emergency = gen.emergency.filter(x=>x.id!==id);
+      }
+
+      renderEmergency(gen);
+      buildReports();
     });
 
-    // تبويب التقارير
-    document.querySelectorAll(".tab-btn").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-        const tab = btn.dataset.tab;
-        document.querySelectorAll(".report-tab").forEach(t=>t.style.display="none");
-        if(tab==="summary") $("rep-summary").style.display = "";
-        if(tab==="overview") $("rep-overview").style.display = "";
-        if(tab==="expenses") $("rep-expenses").style.display = "";
-      });
-    });
-
-    // ====== تصدير / استيراد JSON ======
+    // ====== التصدير JSON ======
     expJSON.addEventListener("click", ()=>{
-      if(!isAdmin()){
-        alert("تصدير JSON متاح للمشرف فقط.");
-        return;
-      }
-      const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+      const data = {
+        generators: state.generators
+      };
+      const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "generator-system-data.json";
+      a.download = "generators-data.json";
       a.click();
       URL.revokeObjectURL(url);
     });
 
+    // ====== الاستيراد JSON ======
     impJSON.addEventListener("change", (e)=>{
-      if(!isAdmin()){
-        alert("استيراد JSON متاح للمشرف فقط.");
-        e.target.value = "";
-        return;
-      }
       const file = e.target.files?.[0];
       if(!file) return;
       const reader = new FileReader();
@@ -1534,6 +1466,7 @@
         try{
           const data = JSON.parse(String(reader.result));
           if(!data || !Array.isArray(data.generators)) throw new Error("بنية غير صحيحة");
+          // تأمين الحقول
           data.generators = data.generators.map((g,idx)=>({
             id: g.id || crypto.randomUUID(),
             name: g.name || ("Generator #"+(idx+1)),
@@ -1546,179 +1479,283 @@
               cost: h.cost != null ? Number(h.cost) : null,
               currency: h.currency || "IQD",
               costNote: h.costNote || ""
+            })) : [],
+            emergency: Array.isArray(g.emergency) ? g.emergency.map(e=>({
+              id: e.id || crypto.randomUUID(),
+              date: e.date || todayStr(),
+              amount: Number(e.amount||0),
+              paid: !!e.paid,
+              note: e.note || ""
             })) : []
           }));
-          state = data;
+          state.generators = data.generators;
           selectedId = state.generators[0]?.id || null;
           renderGenList();
           renderDetail();
           buildReports();
+          alert("تم استيراد البيانات بنجاح.");
         }catch(err){
-          alert("تعذر استيراد الملف: " + (err.message||err));
+          console.error(err);
+          alert("فشل في قراءة ملف JSON. تأكد من صحة الملف.");
+        }finally{
+          impJSON.value = "";
         }
       };
-      reader.readAsText(file);
+      reader.readAsText(file,"utf-8");
     });
 
-    // ====== حفظ البيانات محلياً في المتصفح ======
-    saveLocalBtn.addEventListener("click", ()=>{
-      try{
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-        alert("تم حفظ البيانات على هذا الجهاز بنجاح ✅");
-      }catch(err){
-        console.error("LocalStorage error", err);
-        alert("تعذر حفظ البيانات محلياً (ربما مساحة التخزين ممتلئة).");
-      }
-    });
-
-    // ====== ملخص CSV بسيط من الهيدر ======
+    // ====== تصدير CSV للتقارير ======
     expCSV.addEventListener("click", ()=>{
-      const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
-      const lines = [header.join(",")];
-      state.generators.forEach(gen=>{
-        const cm = currentMeter(gen) ?? "";
-        const since = hoursSinceService(gen);
-        const next  = nextDueAt(gen);
-        const st = statusObj(gen);
-        lines.push([
-          `"${(gen.name||"").replace(/"/g,'""')}"`,
-          gen.lastServiceMeter ?? "",
-          gen.lastServiceDate ?? "",
-          cm,
-          since,
-          next,
-          st.label
-        ].join(","));
+      const rows = buildExpensesReport();
+      let csv = "Generator,Date,Meter,Cost,Currency,Note\n";
+      rows.forEach(r=>{
+        csv += `"${String(r.gen||"").replace(/"/g,'""')}",${r.date},${r.meter||""},${r.cost||""},${r.currency||""},"${String(r.note||"").replace(/"/g,'""')}"\n`;
       });
-      const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+      const blob = new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "generators-quick-summary.csv";
+      a.download = "generators-expenses-report.csv";
       a.click();
       URL.revokeObjectURL(url);
     });
 
-    // ====== تحميل البيانات من LocalStorage أو من generators.json ======
-    async function loadInitialData(){
-      try {
-        const stored = localStorage.getItem(LOCAL_KEY);
-        if (stored) {
-          try {
-            const data = JSON.parse(stored);
-            if (data && Array.isArray(data.generators)) {
-              state = {
-                generators: data.generators.map((g, idx) => ({
-                  id: g.id || crypto.randomUUID(),
-                  name: g.name || ("Generator #" + (idx + 1)),
-                  lastServiceMeter: Number(g.lastServiceMeter || 0),
-                  lastServiceDate: g.lastServiceDate || todayStr(),
-                  readings: Array.isArray(g.readings) ? g.readings.map(r => ({
-                    date: r.date,
-                    meter: Number(r.meter)
-                  })) : [],
-                  serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
-                    date: h.date,
-                    meter: Number(h.meter),
-                    cost: h.cost != null ? Number(h.cost) : null,
-                    currency: h.currency || "IQD",
-                    costNote: h.costNote || ""
-                  })) : []
-                }))
-              };
-              selectedId = state.generators[0]?.id || null;
-              renderGenList();
-              renderDetail();
-              buildReports();
-              console.log("Loaded data from localStorage");
-              return;
-            }
-          } catch(e){
-            console.warn("تعذر قراءة البيانات من التخزين المحلي، سيتم استخدام ملف JSON", e);
-          }
-        }
+    // تبويب التقارير
+    document.querySelectorAll(".tab-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        document.querySelectorAll(".report-tab").forEach(p=>p.classList.remove("active"));
+        document.getElementById("rep-"+tab).classList.add("active");
+      });
+    });
 
-        const res = await fetch("generators.json");
-        if (!res.ok) {
-          console.warn("لم يتم العثور على ملف generators.json");
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!data || !Array.isArray(data.generators)) {
-          console.warn("صيغة ملف JSON غير صحيحة");
-          return;
-        }
-
-        state = {
-          generators: data.generators.map((g, idx) => ({
-            id: g.id || crypto.randomUUID(),
-            name: g.name || ("Generator #" + (idx + 1)),
-            lastServiceMeter: Number(g.lastServiceMeter || 0),
-            lastServiceDate: g.lastServiceDate || todayStr(),
-            readings: Array.isArray(g.readings) ? g.readings.map(r => ({
-              date: r.date,
-              meter: Number(r.meter)
-            })) : [],
-            serviceHistory: Array.isArray(g.serviceHistory) ? g.serviceHistory.map(h => ({
-              date: h.date,
-              meter: Number(h.meter),
-              cost: h.cost != null ? Number(h.cost) : null,
-              currency: h.currency || "IQD",
-              costNote: h.costNote || ""
-            })) : []
-          }))
-        };
-
-        selectedId = state.generators[0]?.id || null;
-        renderGenList();
-        renderDetail();
-        buildReports();
-        console.log("Loaded data from generators.json");
-      } catch (err) {
-        console.error("خطأ أثناء تحميل البيانات", err);
-      }
+    // ====== التقارير ======
+    function parseRange(){
+      const from = repFrom.value || "0000-01-01";
+      const to   = repTo.value || "9999-12-31";
+      return {from,to};
     }
 
-    // ====== تهيئة أولية ======
-    (function init(){
-      genDate.value = todayStr();
-      repFrom.value = "";
-      repTo.value   = "";
-      renderGenList();
-      renderDetail();
-      buildReports();
-      loadInitialData();
-    })();
+    function buildSummaryReport(){
+      const {from, to} = parseRange();
+      const rows = [];
+      state.generators.forEach(gen=>{
+        const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).slice().sort(byDateAsc);
+        const hist = (gen.serviceHistory||[]).filter(h=>h.date>=from && h.date<=to).slice().sort(byDateAsc);
+        if(!readings.length && !hist.length) return;
+        const last = readings[readings.length-1] || null;
+        const first = readings[0] || null;
+        const hours = last && first ? Math.max(0, Number(last.meter)-Number(first.meter)) : 0;
+        const expenses = sum(hist,h=>h.cost);
+        rows.push({
+          name: gen.name,
+          countReadings: readings.length,
+          countServices: hist.length,
+          hours,
+          expenses
+        });
+      });
+      return rows;
+    }
 
-    // ====== استرجاع جلسة المستخدم بعد الريفريش ======
-    (function restoreUserSession(){
-      try{
-        const stored = localStorage.getItem(USER_STORAGE_KEY);
-        if(!stored) return;
+    function buildOverviewReport(){
+      const {from, to} = parseRange();
+      const rows = [];
+      state.generators.forEach((gen,idx)=>{
+        const readings = (gen.readings||[]).filter(r=>r.date>=from && r.date<=to).slice().sort(byDateAsc);
+        const hist = (gen.serviceHistory||[]).filter(h=>h.date>=from && h.date<=to).slice().sort(byDateAsc);
+        if(!readings.length && !hist.length) return;
+        const hours = readings.length>=2 ? Math.max(0, Number(readings[readings.length-1].meter)-Number(readings[0].meter)) : 0;
+        const expenses = sum(hist,h=>h.cost);
+        rows.push({
+          idx: idx+1,
+          name: gen.name,
+          readings: readings.length,
+          services: hist.length,
+          hours,
+          expenses
+        });
+      });
+      return rows;
+    }
 
-        const parsed = JSON.parse(stored);
+    function buildExpensesReport(){
+      const {from, to} = parseRange();
+      const rows = [];
+      state.generators.forEach(gen=>{
+        // مصاريف الصيانة الدورية
+        (gen.serviceHistory||[]).forEach(s=>{
+          if(s.date<from || s.date>to) return;
+          if(s.cost == null) return;
+          rows.push({
+            gen:gen.name,
+            date:s.date,
+            meter:s.meter,
+            cost:s.cost,
+            currency:(s.currency||"").toUpperCase(),
+            note:s.costNote||""
+          });
+        });
 
-        // نتأكد أن المستخدم ما زال موجوداً في قائمة USERS
-        const match = USERS.find(u => u.username === parsed.username && u.role === parsed.role);
-        if(!match) return;
+        // مصاريف الصيانة الطارئة
+        (gen.emergency || []).forEach(e=>{
+          if(e.date<from || e.date>to) return;
+          rows.push({
+            gen: gen.name,
+            date: e.date,
+            meter: "",
+            cost: e.amount,
+            currency: "IQD",
+            note: (e.note ? e.note + " - " : "") + "صيانة طارئة" + (e.paid ? " (مدفوعة)" : " (غير مدفوعة)")
+          });
+        });
+      });
+      rows.sort((a,b)=> a.gen.localeCompare(b.gen) || a.date.localeCompare(b.date));
+      return rows;
+    }
 
-        // تسجيل الدخول تلقائياً
-        currentUser = {username: match.username, role: match.role};
-
-        // إظهار التطبيق وإخفاء شاشة الدخول
-        loginScreen.style.display = "none";
-        appRoot.style.display = "block";
-
-        // تفعيل واجهة الصلاحيات
-        applyRoleUI();
-
-      }catch(e){
-        console.error("خطأ في استرجاع جلسة المستخدم", e);
+    function renderSummaryReport(){
+      const rows = buildSummaryReport();
+      repSummaryBody.innerHTML = "";
+      if(!rows.length){
+        repSummaryBody.innerHTML = "<tr><td colspan='5' class='muted'>لا توجد بيانات في الفترة المختارة.</td></tr>";
+        return;
       }
-    })();
+      rows.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.name}</td>
+          <td>${r.countReadings}</td>
+          <td>${r.countServices}</td>
+          <td>${r.hours}</td>
+          <td>${r.expenses || 0}</td>
+        `;
+        repSummaryBody.appendChild(tr);
+      });
+    }
 
+    function renderOverviewReport(){
+      const rows = buildOverviewReport();
+      repOverviewBody.innerHTML = "";
+      if(!rows.length){
+        repOverviewBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد بيانات في الفترة المختارة.</td></tr>";
+        return;
+      }
+      rows.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.idx}</td>
+          <td>${r.name}</td>
+          <td>${r.readings}</td>
+          <td>${r.services}</td>
+          <td>${r.hours}</td>
+          <td>${r.expenses || 0}</td>
+        `;
+        repOverviewBody.appendChild(tr);
+      });
+    }
+
+    function renderExpensesReport(){
+      const rows = buildExpensesReport();
+      repExpensesBody.innerHTML = "";
+      if(!rows.length){
+        repExpensesBody.innerHTML = "<tr><td colspan='6' class='muted'>لا توجد مصاريف في الفترة المختارة.</td></tr>";
+        return;
+      }
+      rows.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.gen}</td>
+          <td>${r.date}</td>
+          <td>${r.meter || ""}</td>
+          <td>${r.cost || ""}</td>
+          <td>${r.currency || ""}</td>
+          <td>${r.note || ""}</td>
+        `;
+        repExpensesBody.appendChild(tr);
+      });
+    }
+
+    function buildReports(){
+      renderSummaryReport();
+      renderOverviewReport();
+      renderExpensesReport();
+    }
+
+    repRefresh.addEventListener("click", ()=>{
+      buildReports();
+    });
+
+    repCSV.addEventListener("click", ()=>{
+      const activeTabBtn = document.querySelector(".tab-btn.active");
+      const tab = activeTabBtn?.dataset.tab || "summary";
+      let rows = [];
+      let header = [];
+      if(tab==="summary"){
+        rows = buildSummaryReport();
+        header = ["Generator","ReadingsCount","ServicesCount","TotalHours","TotalExpensesIQD"];
+      }else if(tab==="overview"){
+        rows = buildOverviewReport();
+        header = ["#","Generator","Readings","Services","TotalHours","TotalExpensesIQD"];
+      }else{
+        rows = buildExpensesReport();
+        header = ["Generator","Date","Meter","Cost","Currency","Note"];
+      }
+
+      const lines = [];
+      lines.push(header.join(","));
+      rows.forEach(r=>{
+        if(tab==="summary"){
+          lines.push([
+            `"${String(r.name||"").replace(/"/g,'""')}"`,
+            r.countReadings,
+            r.countServices,
+            r.hours,
+            r.expenses||0
+          ].join(","));
+        }else if(tab==="overview"){
+          lines.push([
+            r.idx,
+            `"${String(r.name||"").replace(/"/g,'""')}"`,
+            r.readings,
+            r.services,
+            r.hours,
+            r.expenses||0
+          ].join(","));
+        }else{
+          lines.push([
+            `"${String(r.gen||"").replace(/"/g,'""')}"`,
+            r.date,
+            r.meter,
+            r.cost,
+            r.currency,
+            `"${String(r.note||"").replace(/"/g,'""')}"`,
+          ].join(","));
+        }
+      });
+
+      // إضافة BOM لضمان ظهور العربية بشكل صحيح في Excel
+      const csvContent = "\ufeff" + lines.join("\n");
+      const blob = new Blob([csvContent],{type:"text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      let fnameBase;
+      if(tab === "summary") fnameBase = "generators-summary-report";
+      else if(tab === "overview") fnameBase = "generators-overview-report";
+      else fnameBase = "generators-expenses-report";
+      a.href = url;
+      a.download = fnameBase + ".csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ====== تهيئة أولية ======
+    genDate.value = todayStr();
+    repFrom.value = "";
+    repTo.value = "";
+    buildReports();
   </script>
 </body>
 </html>
