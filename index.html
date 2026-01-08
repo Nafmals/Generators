@@ -926,11 +926,17 @@
       return base + 200;
     }
 
+    // ✅ تعديل: STATUS عربي للواجهة + إنجليزي للتقارير/CSV
     function statusObj(gen){
       const since = hoursSinceService(gen);
-      if(since >= 200) return {label:"متأخرة", class:"status-due"};
-      if(since >= 160) return {label:"قرب الاستحقاق", class:"status-soon"};
-      return {label:"آمنة", class:"status-safe"};
+
+      if(since >= 200){
+        return { labelAr:"متأخرة", labelEn:"OVERDUE", class:"status-due" };
+      }
+      if(since >= 160){
+        return { labelAr:"قرب الاستحقاق", labelEn:"DUE SOON", class:"status-soon" };
+      }
+      return { labelAr:"آمنة", labelEn:"OK", class:"status-safe" };
     }
 
     // ====== الصيانة الطارئة: دوال مساعدة ======
@@ -1026,7 +1032,7 @@
             <div class="gen-name" title="${gen.name}">${gen.name}</div>
             <span class="status-pill ${st.class}">
               <span style="width:8px;height:8px;border-radius:999px;background:currentColor;"></span>
-              ${st.label}
+              ${st.labelAr}
             </span>
           </div>
           <div class="gen-meta">
@@ -1290,10 +1296,10 @@
           return;
         }
         if(!gen.serviceHistory) gen.serviceHistory = [];
-        let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
+        let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===Number(m));
         if(svc){
           if(confirm("هذه القراءة مسجلة كخدمة. هل تريد إلغاء إشارة الخدمة؟")){
-            gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===m));
+            gen.serviceHistory = gen.serviceHistory.filter(h=>!(h.date===d && Number(h.meter)===Number(m)));
           }
         } else {
           if(confirm("تعيين هذه القراءة كخدمة مكتملة؟")){
@@ -1304,7 +1310,7 @@
 
       if(action === "expense"){
         if(!gen.serviceHistory) gen.serviceHistory = [];
-        let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===m);
+        let svc = gen.serviceHistory.find(h=>h.date===d && Number(h.meter)===Number(m));
         if(!svc){
           if(!isAdmin()){
             alert("لا يمكنك إنشاء خدمة جديدة، اطلب من الأدمن تسجيل الخدمة أولاً.");
@@ -1356,7 +1362,6 @@
       }
 
       if(editingEmergencyId){
-        // تحديث سجل موجود
         const item = (state.emergencies||[]).find(e=>e.id===editingEmergencyId);
         if(item){
           item.genId = genId;
@@ -1367,7 +1372,6 @@
           item.paid = !!emPaid.checked;
         }
       } else {
-        // إضافة سجل جديد
         const item = {
           id: crypto.randomUUID(),
           genId: genId,
@@ -1401,7 +1405,6 @@
         if(!confirm("هل تريد حذف سجل الصيانة الطارئة هذا؟")) return;
         state.emergencies = list.filter(x=>x.id!==id);
       } else if(action === "edit"){
-        // تحميل البيانات في النموذج
         emAmount.value = item.amount || "";
         emDate.value = item.date || "";
         emNote.value = item.note || "";
@@ -1458,6 +1461,7 @@
       return rows;
     }
 
+    // ✅ تعديل أخير: "آخر تاريخ صيانة" يكون الحقيقي دائمًا (وليس فقط داخل الفترة)
     function buildOverviewReport(){
       const {from, to} = parseRange();
       const rows = [];
@@ -1472,15 +1476,12 @@
         }
 
         let costIQD = 0;
-        const services = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
-        let lastServiceDate = "";
-        services.forEach(s=>{
+        const servicesInRange = (gen.serviceHistory||[]).filter(s=>s.date>=from && s.date<=to);
+
+        servicesInRange.forEach(s=>{
           if(s.cost != null){
             if((s.currency||"").toUpperCase()==="USD") return;
             costIQD += Number(s.cost);
-          }
-          if(!lastServiceDate || s.date>lastServiceDate){
-            lastServiceDate = s.date;
           }
         });
 
@@ -1489,11 +1490,14 @@
           avgPerHour = costIQD / hours;
         }
 
+        const trueLast = lastServiceInfo(gen);
+        const lastServiceDate = trueLast.date || "";
+
         rows.push({
           name:gen.name,
           hours,
           costIQD,
-          svcCount:services.length,
+          svcCount:servicesInRange.length,
           avgPerHour,
           lastServiceDate
         });
@@ -1817,25 +1821,29 @@
       }
     });
 
-    // ====== ملخص CSV بسيط من الهيدر ======
+    // ✅ تعديل: ملخص CSV من الهيدر يستخدم تاريخ/عداد الخدمة الحقيقي + STATUS إنجليزي
     expCSV.addEventListener("click", ()=>{
       const header = ["Generator","Last Service Meter","Last Service Date","Current Meter","Hours Since Service","Next Due Meter","Status"];
       const lines = [header.join(",")];
+
       state.generators.forEach(gen=>{
         const cm = currentMeter(gen) ?? "";
+        const svc = lastServiceInfo(gen); // ✅ الحقيقي
         const since = hoursSinceService(gen);
         const next  = nextDueAt(gen);
         const st = statusObj(gen);
+
         lines.push([
           `"${(gen.name||"").replace(/"/g,'""')}"`,
-          gen.lastServiceMeter ?? "",
-          gen.lastServiceDate ?? "",
+          svc.meter ?? "",
+          svc.date ?? "",
           cm,
           since,
           next,
-          st.label
+          st.labelEn // ✅ English
         ].join(","));
       });
+
       const blob = new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1955,18 +1963,14 @@
 
         const parsed = JSON.parse(stored);
 
-        // نتأكد أن المستخدم ما زال موجوداً في قائمة USERS
         const match = USERS.find(u => u.username === parsed.username && u.role === parsed.role);
         if(!match) return;
 
-        // تسجيل الدخول تلقائياً
         currentUser = {username: match.username, role: match.role};
 
-        // إظهار التطبيق وإخفاء شاشة الدخول
         loginScreen.style.display = "none";
         appRoot.style.display = "block";
 
-        // تفعيل واجهة الصلاحيات
         applyRoleUI();
 
       }catch(e){
