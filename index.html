@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nafithat Al-Amal | Generator Operations Platform</title>
-<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=2OF-oaZ_JSa3n9W9-mJhHDaQcHCgdB92iju7kD5oaUhWsQmLsJYcBLV0jMPWwTZSPMhfIc_tkx6RfngAEGC2ekIr7weBHBabU3vQ2NuUyW5DSrXh3JbOYtH6n1YyaQuF3MH33WUlTx1qC3_QLdn9CA2R5BKFij1GbwwoZjGq_S3cMxbeON7K6umgXFUL7tNyZ_ueq6lix4crapEvL3cwhMBtfutLEu10Vqwb0WrrgwYxrkI--_CQVy97qjDozrTWUeqPdFHR87GsvnKeqrNAKw" charset="UTF-8"></script><style>
+<style>
 :root{
   --bg:#f4f6f8; --surface:#fff; --surface2:#f8fafc; --ink:#0f172a; --muted:#64748b;
   --line:#e2e8f0; --nav:#0b1220; --nav2:#111827; --accent:#2563eb; --accent2:#1d4ed8;
@@ -65,7 +65,7 @@ button{cursor:pointer}
     <div class="nav-group-title" data-i18n="system">System</div>
     <button class="nav-btn" data-page="audit"><span class="nav-icon">↺</span><span data-i18n="audit">Audit Log</span></button>
     <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span><span data-i18n="settings">Settings</span></button>
-    <div class="sidebar-foot"><div><b>Offline Edition v1.0</b></div><div style="margin-top:4px" data-i18n="offlineReady">Local-first • No internet required</div></div>
+    <div class="sidebar-foot"><div><b>Offline Edition v1.1</b></div><div style="margin-top:4px" data-i18n="offlineReady">Local-first • No internet required</div></div>
   </aside>
 
   <main class="main">
@@ -98,7 +98,7 @@ button{cursor:pointer}
       <section class="page" id="page-generators">
         <div class="page-head"><div><h3 data-i18n="generators">Generators</h3><p data-i18n="generatorPageIntro">Running hours, readings, service history and lifecycle status.</p></div><button class="btn primary" onclick="openGeneratorModal()" data-i18n="addGenerator">Add Generator</button></div>
         <div class="notice warnbox" id="generator-source-note"></div>
-        <div class="card"><div class="table-tools"><input id="gen-search" class="field-control search" placeholder="Search generators..." /><button class="btn" onclick="exportGeneratorsExcel()" data-i18n="exportExcel">Export Excel</button></div><div class="table-wrap"><table><thead><tr><th data-i18n="name">Name</th><th>SMR</th><th data-i18n="lastReading">Last Reading</th><th data-i18n="hoursSinceService">Hours Since Service</th><th data-i18n="nextDue">Next Due</th><th data-i18n="status">Status</th><th data-i18n="actions">Actions</th></tr></thead><tbody id="generator-table-body"></tbody></table></div></div>
+        <div class="card"><div class="table-tools"><input id="gen-search" class="field-control search" placeholder="Search generators..." /><button class="btn" onclick="exportGeneratorsExcel()" data-i18n="exportExcel">Export Excel</button></div><div class="table-wrap"><table><thead><tr><th data-i18n="name">Name</th><th>SMR</th><th data-i18n="lastReading">Last Reading</th><th>${''}</th><th data-i18n="hoursSinceService">Hours Since Service</th><th data-i18n="nextDue">Next Due</th><th data-i18n="status">Status</th><th data-i18n="actions">Actions</th></tr></thead><tbody id="generator-table-body"></tbody></table></div></div>
       </section>
 
       <section class="page" id="page-fuel">
@@ -150,9 +150,30 @@ const DEFAULT_FUEL_RECORDS=[
   {id:'fuel-default-001',date:'2026-08-01',generatorId:'',generatorName:'Perkins 200- KVA-Baghdad -2',liters:500,price:0,totalCost:0,note:''},
   {id:'fuel-default-002',date:'2026-08-01',generatorId:'',generatorName:'Perkins 150- KVA-Baghdad -1',liters:500,price:0,totalCost:0,note:''}
 ];
+const PROVIDED_READING_DATA_VERSION='aug-2026-readings-v1';
+const PROVIDED_GENERATOR_READINGS=[
+  {
+    name:'Perkins 150- KVA-Baghdad -1',
+    lastServiceMeter:2599,
+    lastServiceDate:'2025-10-30',
+    readings:[
+      {date:'2026-08-01',meter:2444},{date:'2026-08-05',meter:2455},{date:'2026-08-06',meter:2460},{date:'2026-08-08',meter:2465},
+      {date:'2026-08-10',meter:2473},{date:'2026-08-11',meter:2480},{date:'2026-08-12',meter:2484},{date:'2026-08-13',meter:2488}
+    ]
+  },
+  {
+    name:'Perkins 200- KVA-Baghdad -2',
+    lastServiceMeter:2294,
+    lastServiceDate:'2025-11-03',
+    readings:[
+      {date:'2026-08-01',meter:2469},{date:'2026-08-05',meter:2476},{date:'2026-08-06',meter:2478},{date:'2026-08-08',meter:2481},
+      {date:'2026-08-10',meter:2487},{date:'2026-08-11',meter:2487},{date:'2026-08-12',meter:2490},{date:'2026-08-13',meter:2491}
+    ]
+  }
+];
 let lang='en';
 let currentModal=null;
-let state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION};
+let state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:''};
 
 const I18N={
  en:{brand:'Generator Operations',overview:'Overview',dashboard:'Dashboard',operations:'Operations',generators:'Generators',fuel:'Fuel',maintenance:'Maintenance',invoices:'Invoices',reports:'Reports',system:'System',audit:'Audit Log',settings:'Settings',offlineReady:'Local-first • No internet required',import:'Import JSON',backup:'Backup JSON',save:'Save Offline',executiveDashboard:'Executive Dashboard',dashboardIntro:'Live totals calculated from the data stored in this offline platform.',print:'Print / PDF',invoiceTrend:'Fuel Consumption Trend',monthlyValues:'Monthly operational fuel consumption (liters)',paymentStatus:'Payment Status',paidVsPending:'Paid vs pending invoice value',invoiceRecords:'invoice records',generatorHealth:'Generator Health',serviceCycle:'200-hour service cycle',fuelSummary:'Fuel Summary',fuelFromAll:'Operational fuel entries only',recentActivity:'Recent Activity',latestRecords:'Latest records',generatorPageIntro:'Running hours, readings, service history and lifecycle status.',addGenerator:'Add Generator',exportExcel:'Export Excel',name:'Name',lastReading:'Last Reading',hoursSinceService:'Hours Since Service',nextDue:'Next Due',status:'Status',actions:'Actions',fuelManagement:'Fuel Management',fuelPageIntro:'Track quantities, unit prices, total cost and consumption by generator.',addFuel:'Add Fuel Entry',date:'Date',generator:'Generator',liters:'Liters',unitPrice:'Unit Price',totalCost:'Total Cost',note:'Note',source:'Source',maintenancePageIntro:'Preventive service history and emergency maintenance records.',addMaintenance:'Add Maintenance',type:'Type',meter:'Meter',cost:'Cost',invoiceManagement:'Invoice Management',invoicePageIntro:'Invoice data, dates, duration, status and company are loaded from Paymants - New(2).xlsx.',addInvoice:'Add Invoice',invoiceNo:'Invoice No.',poContract:'PO / Contract',issueDate:'Issue Date',durationFrom:'Duration From',durationTo:'Duration To',company:'Company',description:'Description',qty:'Qty',unit:'Unit',total:'Total',reportsExports:'Reports & Exports',reportsIntro:'Prepare management outputs by module without internet access.',invoiceReport:'Invoice Report',invoiceReportDesc:'All invoice fields, paid/pending status and amounts.',generatorReport:'Generator Report',generatorReportDesc:'SMR, readings, hours since service, next due and status.',fuelReport:'Fuel Report',fuelReportDesc:'Operational fuel entries only: liters, unit price and total cost.',maintenanceReport:'Maintenance Report',maintenanceReportDesc:'Preventive and emergency maintenance cost history.',fullBackup:'Full JSON Backup',fullBackupDesc:'Portable backup including invoices, generators, fuel, maintenance and audit log.',printManagement:'Management PDF',printManagementDesc:'Use the browser print dialog to save the current report as PDF.',auditLog:'Audit Log',auditIntro:'Local record of additions, edits, deletes and imports.',clearAudit:'Clear Audit',settingsIntro:'Offline data controls and language configuration.',language:'Language',languageDesc:'English and Arabic are separated as a translation layer, so Arabic can be disabled later without changing the data.',offlineStorage:'Offline Storage',offlineStorageDesc:'Changes are stored locally in your browser on this device. Use JSON backup for portability.',importLegacy:'Import Legacy Generator JSON',importLegacyDesc:'Import your generator-system-data.json export from the current JC/JCN generator platform.',resetPlatform:'Reset Local Changes',resetDesc:'Reload the originally embedded invoice backup and remove locally-added operational data.',reset:'Reset',cancel:'Cancel',paid:'Paid',pending:'Pending',totalInvoiceValue:'Total Invoice Value',paidValue:'Paid Value',pendingValue:'Pending Value',fuelQuantity:'Fuel Quantity',fuelCost:'Fuel Cost',generatorCount:'Generators',maintenanceCost:'Maintenance Cost',totalHours:'Operating Hours',records:'records',noData:'No data yet',addFirst:'Add your first record or import your existing generator JSON.',preventive:'Preventive',emergency:'Emergency',edit:'Edit',delete:'Delete',invoice:'Invoice',fuelEntry:'Fuel entry',maintenanceEntry:'Maintenance entry',generatorRecord:'Generator record'},
@@ -178,7 +199,8 @@ function loadState(){
         fuelRecords:Array.isArray(x.fuelRecords)?x.fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),
         emergencyMaintenances:Array.isArray(x.emergencyMaintenances)?x.emergencyMaintenances:[],
         audit:Array.isArray(x.audit)?x.audit:[],
-        invoiceDataVersion:DATA_VERSION
+        invoiceDataVersion:DATA_VERSION,
+        readingDataVersion:x.readingDataVersion||''
       };
       if(!invoiceDataCurrent){
         state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action:'invoice-sync',detail:'Invoices refreshed from Nafmals_Invoices_Edited Excel sheet'});
@@ -202,6 +224,31 @@ function loadState(){
 function saveState(show=false){state.invoiceDataVersion=DATA_VERSION;localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); if(show) alert(lang==='ar'?'تم حفظ البيانات محليًا على هذا الجهاز.':'Data saved offline on this device.');}
 function logAudit(action,detail){state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action,detail});state.audit=state.audit.slice(0,500);saveState(false)}
 
+
+function normalizedGeneratorKey(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'')}
+function syncProvidedGeneratorReadings(){
+  if(state.readingDataVersion===PROVIDED_READING_DATA_VERSION) return false;
+  let changed=false;
+  for(const spec of PROVIDED_GENERATOR_READINGS){
+    let g=state.generators.find(x=>normalizedGeneratorKey(x.name)===normalizedGeneratorKey(spec.name));
+    if(!g){
+      g={id:uid('gen'),name:spec.name,lastServiceMeter:spec.lastServiceMeter,lastServiceDate:spec.lastServiceDate,readings:[],serviceHistory:[],note:''};
+      state.generators.push(g);changed=true;
+    }
+    g.readings=Array.isArray(g.readings)?g.readings:[];
+    for(const seed of spec.readings){
+      const existing=g.readings.find(r=>String(r.date)===seed.date);
+      if(!existing){g.readings.push({id:uid('read'),date:seed.date,meter:seed.meter,note:''});changed=true;}
+    }
+    ensureReadingIds(g);
+  }
+  state.readingDataVersion=PROVIDED_READING_DATA_VERSION;
+  if(changed) state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action:'reading-sync',detail:'Inserted August 2026 daily meter readings for Perkins 150 KVA and Perkins 200 KVA generators'});
+  state.audit=state.audit.slice(0,500);
+  saveState(false);
+  return changed;
+}
+
 function setLanguage(l){lang=l;document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';$('lang-en').classList.toggle('active',l==='en');$('lang-ar').classList.toggle('active',l==='ar');document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));renderAll();updatePageHeader(document.querySelector('.nav-btn.active')?.dataset.page||'dashboard')}
 $('lang-en').onclick=()=>setLanguage('en');$('lang-ar').onclick=()=>setLanguage('ar');
 
@@ -218,6 +265,12 @@ function invoiceFuelCost(){return state.invoices.filter(isFuelInvoice).reduce((s
 function operationalFuelLiters(){return state.fuelRecords.reduce((s,r)=>s+(Number(r.liters??r.qty)||0),0)}
 function operationalFuelCost(){return state.fuelRecords.reduce((s,r)=>s+((Number(r.totalCost)||((Number(r.liters)||0)*(Number(r.price)||0)))||0),0)}
 function generatorCurrentMeter(g){const rs=(g.readings||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));return rs.length?Number(rs[rs.length-1].meter):Number(g.lastServiceMeter||0)}
+function sortedReadings(g){return (g.readings||[]).map((r,idx)=>({id:r.id||('reading-'+idx+'-'+String(r.date||'')),date:r.date||'',meter:Number(r.meter||0),note:r.note||'',_ref:r})).sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.meter)-Number(b.meter))}
+function readingDailyHours(g,readingIdOrDate){const rs=sortedReadings(g);let idx=rs.findIndex(r=>r.id===readingIdOrDate);if(idx<0)idx=rs.findIndex(r=>r.date===readingIdOrDate);if(idx<=0)return null;return Math.max(0,Number(rs[idx].meter)-Number(rs[idx-1].meter))}
+function latestReading(g){const rs=sortedReadings(g);return rs.length?rs[rs.length-1]:null}
+function todayOperatingHours(g){const rs=sortedReadings(g);if(!rs.length)return 0;const d=today();const idx=rs.map(r=>r.date).lastIndexOf(d);if(idx<=0)return idx===0?0:0;return Math.max(0,Number(rs[idx].meter)-Number(rs[idx-1].meter))}
+function ensureReadingIds(g){(g.readings||(g.readings=[])).forEach(r=>{if(!r.id)r.id=uid('read')})}
+
 function lastService(g){const sh=(g.serviceHistory||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));if(sh.length)return {meter:Number(sh[sh.length-1].meter||0),date:sh[sh.length-1].date,cost:Number(sh[sh.length-1].cost||0)};return {meter:Number(g.lastServiceMeter||0),date:g.lastServiceDate||'',cost:0}}
 function hoursSinceService(g){return Math.max(0,generatorCurrentMeter(g)-lastService(g).meter)}
 function genStatus(g){const h=hoursSinceService(g);return h>=200?'due':h>=160?'soon':'safe'}
@@ -243,7 +296,7 @@ function filterInvoices(){const q=($('invoice-search')?.value||'').toLowerCase()
 $('invoice-search').oninput=filterInvoices;$('invoice-status-filter').onchange=filterInvoices;
 
 function renderGenerators(){const note=state.generators.length?(lang==='ar'?'تم تحميل بيانات المولدات في هذه النسخة المحلية.':'Generator data is loaded in this local copy.'):(lang==='ar'?'ملف HTML الذي رفعته لا يحتوي سجلات المولدات نفسها؛ النظام السابق كان يقرأها من LocalStorage أو generators.json. استورد ملف generator-system-data.json لإظهار نفس سجلات المولدات هنا.':'The uploaded HTML does not contain the actual generator records; the legacy app loads them from LocalStorage or generators.json. Import generator-system-data.json to bring the exact generator records into this dashboard.');$('generator-source-note').textContent=note;filterGenerators()}
-function filterGenerators(){const q=($('gen-search')?.value||'').toLowerCase();const rows=state.generators.filter(g=>!q||String(g.name||'').toLowerCase().includes(q));$('generator-table-body').innerHTML=rows.map(g=>{const cm=generatorCurrentMeter(g),svc=lastService(g),h=hoursSinceService(g),st=genStatus(g);return `<tr><td><b>${esc(g.name||'')}</b></td><td>${fmt(svc.meter)}</td><td>${fmt(cm)}</td><td>${fmt(h)}</td><td>${fmt(svc.meter+200)}</td><td><span class="pill ${st}">${st==='safe'?(lang==='ar'?'جيد':'Good'):st==='soon'?(lang==='ar'?'قريب':'Soon'):(lang==='ar'?'مستحق':'Due')}</span></td><td><button class="btn small" onclick="openGeneratorModal('${esc(g.id)}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteGenerator('${esc(g.id)}')">${t('delete')}</button></td></tr>`}).join('')||`<tr><td colspan="7"><div class="empty"><strong>${t('noData')}</strong>${t('addFirst')}</div></td></tr>`}
+function filterGenerators(){const q=($('gen-search')?.value||'').toLowerCase();const rows=state.generators.filter(g=>!q||String(g.name||'').toLowerCase().includes(q));if($('daily-hours-head'))$('daily-hours-head').textContent=lang==='ar'?'ساعات اليوم':'Today Hours';$('generator-table-body').innerHTML=rows.map(g=>{ensureReadingIds(g);const cm=generatorCurrentMeter(g),svc=lastService(g),h=hoursSinceService(g),st=genStatus(g),th=todayOperatingHours(g),lr=latestReading(g);return `<tr><td><b>${esc(g.name||'')}</b><div style="font-size:11px;color:#64748b;margin-top:3px">${lr?.date?esc(lr.date):''}</div></td><td>${fmt(svc.meter)}</td><td>${fmt(cm)}</td><td><b>${fmt(th)} h</b></td><td>${fmt(h)}</td><td>${fmt(svc.meter+200)}</td><td><span class="pill ${st}">${st==='safe'?(lang==='ar'?'جيد':'Good'):st==='soon'?(lang==='ar'?'قريب':'Soon'):(lang==='ar'?'مستحق':'Due')}</span></td><td><button class="btn small primary" onclick="openDailyLogModal('${esc(g.id)}')">${lang==='ar'?'السجل اليومي':'Daily Log'}</button> <button class="btn small" onclick="openGeneratorModal('${esc(g.id)}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteGenerator('${esc(g.id)}')">${t('delete')}</button></td></tr>`}).join('')||`<tr><td colspan="8"><div class="empty"><strong>${t('noData')}</strong>${t('addFirst')}</div></td></tr>`}
 $('gen-search').oninput=filterGenerators;
 
 function mergedFuelRows(){
@@ -274,12 +327,23 @@ function clearAudit(){if(confirm(lang==='ar'?'مسح سجل التغييرات؟
 function renderAll(){renderDashboard();renderInvoices();renderGenerators();renderFuel();renderMaintenance();renderAudit()}
 
 function closeModal(){$('modal-backdrop').classList.remove('open');currentModal=null}
-function openModal(title,body,onSave){$('modal-title').textContent=title;$('modal-body').innerHTML=body;$('modal-backdrop').classList.add('open');$('modal-save').onclick=onSave}
+function openModal(title,body,onSave){$('modal-title').textContent=title;$('modal-body').innerHTML=body;$('modal-backdrop').classList.add('open');$('modal-save').textContent=t('save');$('modal-save').onclick=onSave}
 function val(id){return $(id)?.value??''}
 
 function openInvoiceModal(id){const i=id?state.invoices.find(x=>x.id===id):null;openModal(i?(lang==='ar'?'تعديل فاتورة':'Edit Invoice'):(lang==='ar'?'إضافة فاتورة':'Add Invoice'),`<div class="form-grid"><div class="form-field"><label>${t('invoiceNo')}</label><input class="field-control" id="f-inv-no" value="${esc(i?.invoiceNo||i?.number||'')}"></div><div class="form-field"><label>${t('poContract')}</label><input class="field-control" id="f-inv-po" value="${esc(i?.poNo||i?.contract||'')}"></div><div class="form-field"><label>${t('issueDate')}</label><input type="date" class="field-control" id="f-inv-date" value="${esc(i?.issueDate||today())}"></div><div class="form-field"><label>${t('durationFrom')}</label><input type="date" class="field-control" id="f-inv-from" value="${esc(i?.durationFrom||'')}"></div><div class="form-field"><label>${t('durationTo')}</label><input type="date" class="field-control" id="f-inv-to" value="${esc(i?.durationTo||'')}"></div><div class="form-field"><label>${t('company')}</label><input class="field-control" id="f-inv-company" value="${esc(i?.company||'')}"></div><div class="form-field"><label>${t('unit')}</label><input class="field-control" id="f-inv-unit" value="${esc(i?.unit||'Lot')}"></div><div class="form-field"><label>${t('qty')}</label><input type="number" step="0.01" class="field-control" id="f-inv-qty" value="${i?.qty??1}"></div><div class="form-field"><label>${t('total')}</label><input type="number" step="0.01" class="field-control" id="f-inv-total" value="${invoiceTotal(i||{})}"></div><div class="form-field"><label>${t('status')}</label><select class="field-control" id="f-inv-status"><option value="paid" ${invoiceStatus(i||{})==='paid'?'selected':''}>${t('paid')}</option><option value="unpaid" ${invoiceStatus(i||{})==='unpaid'?'selected':''}>${t('pending')}</option></select></div><div class="form-field full"><label>${t('description')}</label><textarea class="field-control" rows="3" id="f-inv-desc">${esc(i?.description||i?.scope||'')}</textarea></div><div class="form-field full"><label>${lang==='ar'?'بيانات إضافية / ملاحظات':'Additional data / notes'}</label><textarea class="field-control" rows="2" id="f-inv-note">${esc(i?.note||'')}</textarea></div></div>`,()=>{const rec=i||{id:uid('inv')};rec.invoiceNo=rec.number=val('f-inv-no');rec.poNo=rec.contract=val('f-inv-po');rec.issueDate=rec.serviceDate=val('f-inv-date');rec.durationFrom=val('f-inv-from');rec.durationTo=val('f-inv-to');rec.company=val('f-inv-company');rec.unit=val('f-inv-unit');rec.qty=Number(val('f-inv-qty')||0);rec.total=rec.balance=Number(val('f-inv-total')||0);rec.status=val('f-inv-status');rec.description=rec.scope=val('f-inv-desc');rec.note=val('f-inv-note');if(!i)state.invoices.unshift(rec);logAudit(i?'edit':'add',(i?'Edited ':'Added ')+(rec.invoiceNo||'invoice'));closeModal();renderAll()})}
 function deleteInvoice(id){if(confirm(lang==='ar'?'حذف هذه الفاتورة؟':'Delete this invoice?')){const x=state.invoices.find(i=>i.id===id);state.invoices=state.invoices.filter(i=>i.id!==id);logAudit('delete','Deleted invoice '+(x?.invoiceNo||id));renderAll()}}
 
+function openDailyLogModal(genId,readingId){
+ const g=state.generators.find(x=>x.id===genId);if(!g)return;ensureReadingIds(g);
+ const editing=readingId?(g.readings||[]).find(r=>r.id===readingId):null;
+ const rs=sortedReadings(g).slice().reverse();
+ const rows=rs.map(r=>{const h=readingDailyHours(g,r.id);return `<tr><td>${esc(r.date)}</td><td>${fmt(r.meter)}</td><td><b>${h==null?'—':fmt(h)+' h'}</b></td><td>${esc(r.note||'')}</td><td><button class="btn small" onclick="openDailyLogModal('${esc(g.id)}','${esc(r.id)}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteDailyReading('${esc(g.id)}','${esc(r.id)}')">${t('delete')}</button></td></tr>`}).join('');
+ const last=latestReading(g);const th=todayOperatingHours(g);
+ openModal((lang==='ar'?'سجل التشغيل اليومي — ':'Daily Operating Log — ')+g.name,`<div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:16px"><div class="kpi"><div class="kpi-label">${lang==='ar'?'آخر قراءة':'Latest Meter'}</div><div class="kpi-value">${fmt(last?.meter||generatorCurrentMeter(g))}</div><div class="kpi-foot">${esc(last?.date||'')}</div></div><div class="kpi"><div class="kpi-label">${lang==='ar'?'ساعات تشغيل اليوم':'Today Operating Hours'}</div><div class="kpi-value">${fmt(th)} h</div><div class="kpi-foot">${today()}</div></div><div class="kpi"><div class="kpi-label">${lang==='ar'?'منذ آخر صيانة':'Since Service'}</div><div class="kpi-value">${fmt(hoursSinceService(g))} h</div><div class="kpi-foot">${lang==='ar'?'دورة 200 ساعة':'200-hour cycle'}</div></div></div><div class="form-grid"><div class="form-field"><label>${lang==='ar'?'التاريخ':'Date'}</label><input type="date" class="field-control" id="f-read-date" value="${esc(editing?.date||today())}"></div><div class="form-field"><label>${lang==='ar'?'قراءة العداد (SMR)':'Meter Reading (SMR)'}</label><input type="number" step="0.01" class="field-control" id="f-read-meter" value="${editing?.meter??''}" placeholder="${last?.meter??''}"></div><div class="form-field"><label>${lang==='ar'?'ملاحظة':'Note'}</label><input class="field-control" id="f-read-note" value="${esc(editing?.note||'')}"></div></div><div style="margin-top:18px"><h4 style="margin:0 0 8px">${lang==='ar'?'سجل القراءات اليومية':'Daily Reading History'}</h4><div class="table-wrap" style="max-height:330px"><table><thead><tr><th>${lang==='ar'?'التاريخ':'Date'}</th><th>${lang==='ar'?'قراءة العداد':'Meter'}</th><th>${lang==='ar'?'ساعات التشغيل اليومية':'Daily Hours'}</th><th>${lang==='ar'?'ملاحظة':'Note'}</th><th>${lang==='ar'?'إجراءات':'Actions'}</th></tr></thead><tbody>${rows||`<tr><td colspan="5"><div class="empty">${t('noData')}</div></td></tr>`}</tbody></table></div></div>`,()=>saveDailyReading(genId,editing?.id||''));
+ $('modal-save').textContent=editing?(lang==='ar'?'حفظ التعديل':'Save Reading'):(lang==='ar'?'إضافة القراءة':'Add Reading');
+}
+function saveDailyReading(genId,readingId){const g=state.generators.find(x=>x.id===genId);if(!g)return;ensureReadingIds(g);const d=val('f-read-date'),m=Number(val('f-read-meter')),note=val('f-read-note');if(!d||!Number.isFinite(m)||m<0){alert(lang==='ar'?'أدخل التاريخ وقراءة عداد صحيحة.':'Enter a valid date and meter reading.');return}const others=(g.readings||[]).filter(r=>r.id!==readingId).sort((a,b)=>String(a.date).localeCompare(String(b.date)));const prev=others.filter(r=>String(r.date)<d).slice(-1)[0];if(prev&&m<Number(prev.meter)){alert(lang==='ar'?'قراءة العداد لا يمكن أن تكون أقل من القراءة السابقة.':'Meter reading cannot be lower than the previous reading.');return}const next=others.find(r=>String(r.date)>d);if(next&&m>Number(next.meter)){alert(lang==='ar'?'قراءة العداد لا يمكن أن تكون أعلى من القراءة التالية المسجلة.':'Meter reading cannot be higher than the next recorded reading.');return}let r=readingId?(g.readings||[]).find(x=>x.id===readingId):null;if(r){r.date=d;r.meter=m;r.note=note}else{const same=(g.readings||[]).find(x=>x.date===d);if(same){same.meter=m;same.note=note;r=same}else{r={id:uid('read'),date:d,meter:m,note};(g.readings||(g.readings=[])).push(r)}}logAudit(readingId?'edit':'add',(readingId?'Edited ':'Added ')+'daily reading for '+g.name+' '+d+' = '+m);saveState(false);renderAll();openDailyLogModal(genId,r.id)}
+function deleteDailyReading(genId,readingId){const g=state.generators.find(x=>x.id===genId);if(!g)return;if(!confirm(lang==='ar'?'حذف هذه القراءة اليومية؟':'Delete this daily reading?'))return;const r=(g.readings||[]).find(x=>x.id===readingId);g.readings=(g.readings||[]).filter(x=>x.id!==readingId);logAudit('delete','Deleted daily reading for '+g.name+' '+(r?.date||''));saveState(false);renderAll();openDailyLogModal(genId)}
 function openGeneratorModal(id){const g=id?state.generators.find(x=>x.id===id):null;openModal(g?(lang==='ar'?'تعديل مولد':'Edit Generator'):(lang==='ar'?'إضافة مولد':'Add Generator'),`<div class="form-grid"><div class="form-field"><label>${t('name')}</label><input class="field-control" id="f-gen-name" value="${esc(g?.name||'')}"></div><div class="form-field"><label>Last Service SMR</label><input type="number" class="field-control" id="f-gen-smr" value="${g?.lastServiceMeter??0}"></div><div class="form-field"><label>${lang==='ar'?'تاريخ آخر صيانة':'Last Service Date'}</label><input type="date" class="field-control" id="f-gen-date" value="${esc(g?.lastServiceDate||today())}"></div><div class="form-field"><label>${lang==='ar'?'آخر قراءة حالية':'Current Meter Reading'}</label><input type="number" class="field-control" id="f-gen-current" value="${g?generatorCurrentMeter(g):0}"></div><div class="form-field full"><label>${lang==='ar'?'بيانات إضافية / ملاحظات':'Additional data / notes'}</label><textarea class="field-control" id="f-gen-note" rows="2">${esc(g?.note||'')}</textarea></div></div>`,()=>{const rec=g||{id:uid('gen'),readings:[],serviceHistory:[]};rec.name=val('f-gen-name');rec.lastServiceMeter=Number(val('f-gen-smr')||0);rec.lastServiceDate=val('f-gen-date');rec.note=val('f-gen-note');const current=Number(val('f-gen-current')||0);if(current){const d=today();const existing=(rec.readings||[]).find(r=>r.date===d);if(existing)existing.meter=current;else(rec.readings||(rec.readings=[])).push({date:d,meter:current})}if(!g)state.generators.push(rec);logAudit(g?'edit':'add',(g?'Edited ':'Added ')+'generator '+rec.name);closeModal();renderAll()})}
 function deleteGenerator(id){if(confirm(lang==='ar'?'حذف هذا المولد؟':'Delete this generator?')){const g=state.generators.find(x=>x.id===id);state.generators=state.generators.filter(x=>x.id!==id);state.fuelRecords=state.fuelRecords.filter(x=>(x.generatorId||x.genId)!==id);state.emergencyMaintenances=state.emergencyMaintenances.filter(x=>(x.generatorId||x.genId)!==id);logAudit('delete','Deleted generator '+(g?.name||id));renderAll()}}
 
@@ -294,16 +358,16 @@ function deleteMaintenance(id,type){if(confirm(lang==='ar'?'حذف سجل الص
 function exportBackup(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json;charset=utf-8'});downloadBlob(blob,'Nafithat-Generator-Operations-Backup.json')}
 $('export-data').onclick=exportBackup;$('save-data').onclick=()=>saveState(true);$('import-data').onclick=()=>$('import-file').click();
 $('import-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result);if(Array.isArray(data)){state.invoices=data;logAudit('import','Imported invoice JSON array: '+data.length+' records')}else{if(Array.isArray(data.invoices))state.invoices=data.invoices;if(Array.isArray(data.generators))state.generators=data.generators;if(Array.isArray(data.fuelRecords))state.fuelRecords=data.fuelRecords;if(Array.isArray(data.emergencyMaintenances))state.emergencyMaintenances=data.emergencyMaintenances;logAudit('import','Imported platform/generator JSON')}saveState(false);renderAll();alert(lang==='ar'?'تم الاستيراد بنجاح.':'Import completed.')}catch(err){alert((lang==='ar'?'تعذر الاستيراد: ':'Import failed: ')+err.message)}};rd.readAsText(f);e.target.value=''};
-function resetPlatform(){if(confirm(lang==='ar'?'سيتم حذف التغييرات المحلية وإرجاع بيانات الفواتير الأصلية. متابعة؟':'This will remove local changes and restore the embedded invoice backup. Continue?')){localStorage.removeItem(STORAGE_KEY);state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION};saveState(false);renderAll()}}
+function resetPlatform(){if(confirm(lang==='ar'?'سيتم حذف التغييرات المحلية وإرجاع بيانات الفواتير الأصلية. متابعة؟':'This will remove local changes and restore the embedded invoice backup. Continue?')){localStorage.removeItem(STORAGE_KEY);state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:''};syncProvidedGeneratorReadings();saveState(false);renderAll()}}
 
 function downloadBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),500)}
 function exportExcelHtml(filename,title,headers,rows){const cells=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');let x=`<html><head><meta charset="UTF-8"></head><body><h2>${cells(title)}</h2><table border="1"><tr>${headers.map(h=>'<th>'+cells(h)+'</th>').join('')}</tr>${rows.map(r=>'<tr>'+r.map(v=>'<td>'+cells(v)+'</td>').join('')+'</tr>').join('')}</table></body></html>`;downloadBlob(new Blob(['\ufeff'+x],{type:'application/vnd.ms-excel;charset=utf-8'}),filename)}
 function exportInvoicesExcel(){exportExcelHtml('Invoices-Report.xls','Invoice Report',['NO.','PO No.','INVOICE NO.','INVOICE DATE','DESCRIPTION','UNIT','QTY','INVOICE AMOUNT','TOTAL','DURATION FROM','DURATION TO','Status','Company'],state.invoices.map(i=>[i.no??'',i.poNo||i.contract||'',i.invoiceNo||i.number||'',i.issueDate||i.serviceDate||'',i.description||i.scope||'',i.unit||'',i.qty||0,i.invoiceAmount??i.subtotal??0,invoiceTotal(i),i.durationFrom||'',i.durationTo||'',invoiceStatus(i)==='paid'?'Paid':'Unpaid',i.company||'']))}
-function exportGeneratorsExcel(){exportExcelHtml('Generators-Report.xls','Generator Report',['Generator','Last Service Meter','Last Service Date','Current Meter','Hours Since Service','Next Due','Status'],state.generators.map(g=>{const s=lastService(g),h=hoursSinceService(g);return[g.name||'',s.meter,s.date,generatorCurrentMeter(g),h,s.meter+200,genStatus(g)]}))}
+function exportGeneratorsExcel(){exportExcelHtml('Generators-Report.xls','Generator Report',['Generator','Last Service Meter','Last Service Date','Current Meter','Last Reading Date','Today Hours','Hours Since Service','Next Due','Status'],state.generators.map(g=>{const s=lastService(g),h=hoursSinceService(g),lr=latestReading(g);return[g.name||'',s.meter,s.date,generatorCurrentMeter(g),lr?.date||'',todayOperatingHours(g),h,s.meter+200,genStatus(g)]}))}
 function exportFuelExcel(){exportExcelHtml('Fuel-Report.xls','Fuel Report',['Date','Generator','Liters','Unit Price','Total Cost IQD','Note','Source'],mergedFuelRows().map(r=>[r.date,r.generatorName,r.liters,r.price,r.totalCost,r.note,r.source]))}
 function exportMaintenanceExcel(){exportExcelHtml('Maintenance-Report.xls','Maintenance Report',['Date','Generator','Type','Meter','Cost IQD','Note'],allMaintenance().map(r=>[r.date,r.generatorName,r.type,r.meter,r.cost,r.note]))}
 
 $('modal-backdrop').addEventListener('click',e=>{if(e.target===$('modal-backdrop'))closeModal()});
-loadState();setLanguage('en');renderAll();
+loadState();syncProvidedGeneratorReadings();setLanguage('en');renderAll();
 </script>
 </body></html>
