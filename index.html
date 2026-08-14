@@ -209,7 +209,7 @@ html[dir="rtl"] .font-popover{right:auto;left:0}
 .font-preview-aa{font-size:23px;font-weight:850;color:var(--accent);letter-spacing:-.06em}.font-preview-text{min-width:0}.font-preview-text b{display:block;font-size:12px}.font-preview-text small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
 .font-slider-row{display:grid;grid-template-columns:22px 1fr 28px;align-items:center;gap:8px;margin:3px 0 12px}.font-slider-row .fs-a{font-weight:800;color:var(--muted);font-size:11px}.font-slider-row .fs-a.big{font-size:17px;color:var(--ink)}
 .font-range{width:100%;accent-color:var(--accent);cursor:pointer}.font-range:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:999px}
-.font-preset-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.font-preset{border:1px solid var(--line);background:var(--button-bg);color:var(--ink);border-radius:9px;padding:7px 4px;cursor:pointer;font-size:10px;font-weight:750;line-height:1.2}.font-preset:hover{border-color:var(--accent);background:var(--soft)}.font-preset.active{border-color:var(--accent);background:var(--soft);color:var(--accent);box-shadow:0 0 0 2px var(--focus-ring)}
+.font-preset-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.font-preset{border:1px solid var(--line);background:var(--button-bg);color:var(--ink);border-radius:9px;padding:7px 4px;cursor:pointer;font-size:10px;font-weight:750;line-height:1.2}.font-preset:hover{border-color:var(--accent);background:var(--soft)}.font-preset.active{border-color:var(--accent);background:var(--soft);color:var(--accent);box-shadow:0 0 0 2px var(--focus-ring)}
 .font-reset-pro{width:100%;margin-top:10px;border:0;background:transparent;color:var(--accent);font-size:10px;font-weight:800;cursor:pointer;padding:6px;border-radius:8px}.font-reset-pro:hover{background:var(--soft)}
 @media(max-width:650px){.font-popover{position:fixed;top:70px;left:14px!important;right:14px!important;width:auto}}
 
@@ -306,12 +306,14 @@ body[data-theme="sand"] .logo.logo-pro,body[data-theme="graphite"] .logo.logo-pr
           <div class="font-popover" id="font-popover" role="dialog" aria-label="Text size">
             <div class="font-popover-head"><div><b id="font-panel-title">Text size</b><small id="font-panel-desc">Adjust interface text without changing your data.</small></div><button type="button" id="font-close" class="font-close" aria-label="Close">×</button></div>
             <div class="font-preview-box"><span class="font-preview-aa">Aa</span><div class="font-preview-text"><b id="font-preview-title">Interface preview</b><small id="font-preview-desc">Readable, balanced typography</small></div></div>
-            <div class="font-slider-row"><span class="fs-a">50%</span><input id="font-range" class="font-range" type="range" min="50" max="100" step="5" value="100" aria-label="Text size percentage"><span class="fs-a big">100%</span></div>
+            <div class="font-slider-row"><span class="fs-a">50%</span><input id="font-range" class="font-range" type="range" min="50" max="150" step="5" value="100" aria-label="Text size percentage"><span class="fs-a big">150%</span></div>
             <div class="font-preset-row">
               <button type="button" class="font-preset" data-font-preset="0.50"><span id="font-preset-compact">Small</span><br>50%</button>
               <button type="button" class="font-preset" data-font-preset="0.65"><span id="font-preset-standard">Compact</span><br>65%</button>
               <button type="button" class="font-preset" data-font-preset="0.80"><span id="font-preset-comfort">Comfort</span><br>80%</button>
               <button type="button" class="font-preset" data-font-preset="1.00"><span id="font-preset-large">Standard</span><br>100%</button>
+              <button type="button" class="font-preset" data-font-preset="1.25"><span id="font-preset-xlarge">Large</span><br>125%</button>
+              <button type="button" class="font-preset" data-font-preset="1.50"><span id="font-preset-max">Maximum</span><br>150%</button>
             </div>
             <button type="button" id="font-reset" class="font-reset-pro">Reset to 100%</button>
           </div>
@@ -573,9 +575,9 @@ function setTheme(theme,save=true){
   if($('theme-select'))$('theme-select').value=theme;
   document.querySelectorAll('[data-theme-choice]').forEach(el=>el.classList.toggle('active',el.dataset.themeChoice===theme));
 }
-function currentFontScale(){const v=Number(localStorage.getItem(FONT_SCALE_KEY));return Number.isFinite(v)&&v>=.50&&v<=1.00?v:1}
+function currentFontScale(){const v=Number(localStorage.getItem(FONT_SCALE_KEY));return Number.isFinite(v)&&v>=.50&&v<=1.50?v:1}
 function setFontScale(scale,save=true){
-  scale=Math.max(.50,Math.min(1.00,Math.round(Number(scale)*20)/20));
+  scale=Math.max(.50,Math.min(1.50,Math.round(Number(scale)*20)/20));
   document.documentElement.style.setProperty('--font-scale',String(scale));
   if(save)localStorage.setItem(FONT_SCALE_KEY,String(scale));
   const pct=Math.round(scale*100);
@@ -585,7 +587,7 @@ function setFontScale(scale,save=true){
 }
 function updateFontControlTitles(){
   const ar=lang==='ar';
-  const labels=ar?{title:'حجم النص',desc:'اختر حجم النص من 50% إلى 100% بدون التأثير على بياناتك.',preview:'معاينة الواجهة',previewDesc:'خط واضح ومتوازن',compact:'صغير',standard:'مضغوط',comfort:'مريح',large:'قياسي',reset:'إعادة إلى 100%',close:'إغلاق'}:{title:'Text size',desc:'Choose a text size from 50% to 100% without affecting your data.',preview:'Interface preview',previewDesc:'Readable, balanced typography',compact:'Small',standard:'Compact',comfort:'Comfort',large:'Standard',reset:'Reset to 100%',close:'Close'};
+  const labels=ar?{title:'حجم النص',desc:'اختر حجم النص من 50% إلى 150% بدون التأثير على بياناتك.',preview:'معاينة الواجهة',previewDesc:'خط واضح ومتوازن',compact:'صغير',standard:'مضغوط',comfort:'مريح',large:'قياسي',xlarge:'كبير',max:'أقصى حجم',reset:'إعادة إلى 100%',close:'إغلاق'}:{title:'Text size',desc:'Choose a text size from 50% to 150% without affecting your data.',preview:'Interface preview',previewDesc:'Readable, balanced typography',compact:'Small',standard:'Compact',comfort:'Comfort',large:'Standard',xlarge:'Large',max:'Maximum',reset:'Reset to 100%',close:'Close'};
   if($('font-panel-title'))$('font-panel-title').textContent=labels.title;
   if($('font-panel-desc'))$('font-panel-desc').textContent=labels.desc;
   if($('font-preview-title'))$('font-preview-title').textContent=labels.preview;
@@ -594,6 +596,8 @@ function updateFontControlTitles(){
   if($('font-preset-standard'))$('font-preset-standard').textContent=labels.standard;
   if($('font-preset-comfort'))$('font-preset-comfort').textContent=labels.comfort;
   if($('font-preset-large'))$('font-preset-large').textContent=labels.large;
+  if($('font-preset-xlarge'))$('font-preset-xlarge').textContent=labels.xlarge;
+  if($('font-preset-max'))$('font-preset-max').textContent=labels.max;
   if($('font-reset'))$('font-reset').textContent=labels.reset;
   if($('font-trigger')){$('font-trigger').title=labels.title;$('font-trigger').setAttribute('aria-label',labels.title)}
   if($('font-popover'))$('font-popover').setAttribute('aria-label',labels.title);
