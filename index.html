@@ -1,422 +1,248 @@
 from pathlib import Path
-import textwrap, json, zipfile, os
+import json, re, zipfile, os, math
 
-out = Path("/mnt/data/generator_platform")
-out.mkdir(exist_ok=True)
+gen_path = Path("/mnt/data/generator-system-data (11).json")
+inv_path = Path("/mnt/data/invoices-backup (3).json")
+platform_path = Path("/mnt/data/generator_platform_IQD/index.html")
 
-html = r"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generator Operations & Financial Management Platform</title>
-<style>
-:root{
-  --bg:#f4f7fb; --panel:#fff; --nav:#10263f; --nav2:#173a5e; --text:#182433;
-  --muted:#6f7e8e; --line:#dfe6ee; --accent:#1b76d1; --good:#168a55; --warn:#d99500; --bad:#c83d3d;
-  --shadow:0 8px 28px rgba(16,38,63,.08);
+gen_data = json.loads(gen_path.read_text(encoding="utf-8"))
+inv_data = json.loads(inv_path.read_text(encoding="utf-8"))
+html = platform_path.read_text(encoding="utf-8")
+
+# --- Transform source generator data into platform schema ---
+generators = []
+smr = []
+maintenance = []
+fuel = []
+
+for idx, g in enumerate(gen_data.get("generators", []), start=1):
+    readings = sorted(g.get("readings", []), key=lambda x: x.get("date",""))
+    current = readings[-1]["meter"] if readings else g.get("lastServiceMeter", 0)
+    prev = readings[-2]["meter"] if len(readings) >= 2 else (readings[0]["meter"] if readings else current)
+    
+    # Infer KVA/location/model only from generator name text; leave blank when not present.
+    name = g.get("name","")
+    kva_match = re.search(r'(\d+)\s*[- ]*\s*KVA', name, re.I)
+    kva = int(kva_match.group(1)) if kva_match else ""
+    location = "Baghdad" if "Baghdad" in name or "Bahgdad" in name else ""
+    model = "Perkins" if "Perkins" in name else ""
+    
+    generators.append({
+        "id": g.get("id"),
+        "name": name,
+        "model": model,
+        "kva": kva,
+        "location": location,
+        "currentSmr": current,
+        "lastServiceSmr": g.get("lastServiceMeter", 0),
+        "lastServiceDate": g.get("lastServiceDate",""),
+        "interval": 250,
+        "status": "Running"
+    })
+    
+    # SMR readings: generate previous value from chronological order
+    for i, r in enumerate(readings):
+        previous = readings[i-1]["meter"] if i > 0 else r["meter"]
+        smr.append({
+            "id": f"SMR-{g.get('id')}-{i+1}",
+            "generatorId": g.get("id"),
+            "date": r.get("date",""),
+            "previous": previous,
+            "current": r.get("meter",0)
+        })
+    
+    for sh in g.get("serviceHistory", []):
+        maintenance.append({
+            "id": sh.get("id"),
+            "type": "Preventive",
+            "generatorId": g.get("id"),
+            "date": sh.get("date",""),
+            "smr": sh.get("meter",0),
+            "description": sh.get("costNote") or "Preventive maintenance / service",
+            "cost": sh.get("cost") or 0,
+            "currency": sh.get("currency") or "IQD",
+            "payment": "—"
+        })
+
+for em in gen_data.get("emergencyMaintenances", []):
+    maintenance.append({
+        "id": em.get("id"),
+        "type": "Emergency",
+        "generatorId": em.get("genId") or em.get("generatorId"),
+        "date": em.get("date",""),
+        "smr": em.get("meter",0),
+        "description": em.get("description") or em.get("note") or "Emergency maintenance",
+        "cost": em.get("cost") or 0,
+        "currency": em.get("currency") or "IQD",
+        "payment": em.get("paymentStatus") or "—"
+    })
+
+for fr in gen_data.get("fuelRecords", []):
+    fuel.append({
+        "id": fr.get("id"),
+        "generatorId": fr.get("genId"),
+        "date": fr.get("date",""),
+        "liters": fr.get("liters",0),
+        "price": fr.get("pricePerLiter",0),
+        "supplier": fr.get("note") or ""
+    })
+
+# --- Import invoice backup into platform schema, preserving source values as IQD ---
+# Use unique platform IDs to avoid duplicate invoice numbers colliding in calculations.
+invoices = []
+for n, inv in enumerate(inv_data, start=1):
+    invoice_no = inv.get("invoiceNo") or inv.get("number") or f"INV-{n}"
+    total = inv.get("total")
+    qty = inv.get("qty") or 1
+    # Derive unit price so platform total = source total where possible.
+    unit_price = (float(total) / float(qty)) if total is not None and qty else (inv.get("invoiceAmount") or 0)
+    invoices.append({
+        "id": f"{invoice_no}__{n}",
+        "displayNo": invoice_no,
+        "po": inv.get("poNo") or inv.get("contract") or "",
+        "date": inv.get("issueDate") or "",
+        "customer": inv.get("customerName") or inv.get("billTo") or "",
+        "description": inv.get("description") or inv.get("scope") or "",
+        "qty": qty,
+        "unit": inv.get("unit") or "",
+        "unitPrice": unit_price,
+        "currency": "IQD",
+        "from": inv.get("durationFrom") or "",
+        "to": inv.get("durationTo") or "",
+        "sourceStatus": inv.get("status") or "",
+        "sourceBalance": inv.get("balance") if inv.get("balance") is not None else total
+    })
+
+# No payment records present in invoice backup as separate allocations; keep empty to avoid inventing receipts.
+payments = []
+
+# Keep expenses empty unless supplied by source.
+expenses = []
+
+# Replace demo object in HTML.
+start = html.find("const demo={")
+if start == -1:
+    raise RuntimeError("Could not find demo object in platform HTML.")
+end = html.find("let db=", start)
+if end == -1:
+    raise RuntimeError("Could not locate end of demo object.")
+
+demo_obj = {
+    "generators": generators,
+    "smr": smr,
+    "fuel": fuel,
+    "maintenance": maintenance,
+    "expenses": expenses,
+    "invoices": invoices,
+    "payments": payments,
+    "audit": [{
+        "date": "Imported from SDNs / invoice backup",
+        "action": "Source Data Imported",
+        "module": "System",
+        "record": f"{len(generators)} generators, {len(smr)} SMR readings, {len(maintenance)} maintenance records, {len(fuel)} fuel records, {len(invoices)} invoice rows",
+        "role": "Administrator"
+    }],
+    "config": {"interval":250,"role":"Administrator"}
 }
-*{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
-.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
-.sidebar{background:linear-gradient(180deg,var(--nav),#0b1b2d);color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh;overflow:auto}
-.brand{font-weight:800;font-size:18px;line-height:1.3;margin:0 8px 24px}.brand small{display:block;color:#9eb4ca;font-weight:500;margin-top:6px}
-.nav button{width:100%;border:0;background:transparent;color:#c9d6e3;text-align:left;padding:12px 14px;border-radius:10px;margin:3px 0;font-size:14px;cursor:pointer}
-.nav button:hover,.nav button.active{background:var(--nav2);color:#fff}
-.main{padding:24px 28px 40px;min-width:0}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:14px}
-.title h1{margin:0;font-size:25px}.title p{margin:5px 0 0;color:var(--muted);font-size:13px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-button,.btn{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:9px;padding:9px 13px;cursor:pointer;font-weight:600}
-button.primary,.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.danger{color:var(--bad)}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px}
-.kpi .label{color:var(--muted);font-size:12px}.kpi .value{font-size:25px;font-weight:800;margin-top:8px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
-.section{display:none}.section.active{display:block}
-.section-head{display:flex;justify-content:space-between;align-items:center;margin:8px 0 14px;gap:10px}
-.section-head h2{margin:0;font-size:20px}
-.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;min-width:860px} th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
-th{background:#f7f9fc;color:#546273;position:sticky;top:0} tr:last-child td{border-bottom:0}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700}
-.badge.good{background:#e8f6ef;color:var(--good)}.badge.warn{background:#fff5dc;color:#9b6a00}.badge.bad{background:#fdebea;color:var(--bad)}.badge.info{background:#e9f2ff;color:#2366a9}
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters input,.filters select,.form input,.form select,.form textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff}
-.filters input{min-width:220px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-.chart{height:290px}.chart canvas{width:100%;height:230px}
-.form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.form label{font-size:12px;color:#526170;display:flex;flex-direction:column;gap:6px}.form .full{grid-column:1/-1}
-dialog{border:0;border-radius:16px;padding:0;max-width:700px;width:92%;box-shadow:0 18px 70px rgba(0,0,0,.25)} dialog::backdrop{background:rgba(12,28,45,.45)}
-.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid var(--line)}.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0}.modal-body{padding:18px}.modal-foot{border-top:1px solid var(--line);border-bottom:0;display:flex;justify-content:flex-end;gap:8px}
-.notice{padding:12px 14px;border-radius:10px;background:#eef5ff;color:#275e95;font-size:13px;border:1px solid #d5e5f7}
-.report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.report-card{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff}.report-card h4{margin:0 0 8px}.report-card p{color:var(--muted);font-size:12px;min-height:32px}
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.small{font-size:12px;color:var(--muted)}
-@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.app{grid-template-columns:210px 1fr}}
-@media(max-width:760px){.app{display:block}.sidebar{height:auto;position:relative}.nav{display:grid;grid-template-columns:repeat(2,1fr)}.main{padding:16px}.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}.form .full{grid-column:auto}.report-grid{grid-template-columns:1fr}}
-@media print{.sidebar,.topbar .actions,.section-head button,.filters,.toolbar{display:none!important}.app{display:block}.main{padding:0}.section{display:none!important}.section.active{display:block!important}.card,.table-wrap{box-shadow:none}}
-</style>
-</head>
-<body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">Generator Platform<small>Operations & Financial Management</small></div>
-    <nav class="nav" id="nav"></nav>
-  </aside>
-  <main class="main">
-    <div class="topbar">
-      <div class="title"><h1 id="pageTitle">Executive Dashboard</h1><p id="pageDesc">Latest operational and financial overview</p></div>
-      <div class="actions">
-        <button onclick="exportBackup()">Backup JSON</button>
-        <button onclick="document.getElementById('restoreFile').click()">Restore</button>
-        <input id="restoreFile" type="file" accept=".json" hidden onchange="restoreBackup(event)">
-        <button class="primary" onclick="window.print()">Print</button>
-      </div>
-    </div>
+demo_js = "const demo=" + json.dumps(demo_obj, ensure_ascii=False, separators=(",",":")) + ";\n"
+html = html[:start] + demo_js + html[end:]
 
-    <section id="dashboard" class="section active">
-      <div class="filters">
-        <select id="dashPeriod" onchange="renderAll()">
-          <option value="all">All Periods</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option><option value="365">Last 12 Months</option>
-        </select>
-      </div>
-      <div class="grid" id="kpis"></div>
-      <div class="two">
-        <div class="card chart"><b>Cost by Generator</b><p class="small">Fuel + maintenance + emergency + other expenses</p><canvas id="costChart"></canvas></div>
-        <div class="card chart"><b>Maintenance Status</b><p class="small">Normal, due soon and overdue</p><canvas id="maintChart"></canvas></div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <b>Management Alerts</b><div id="alerts" style="margin-top:10px"></div>
-      </div>
-    </section>
+# Use a new localStorage key so the imported source data loads cleanly.
+html = html.replace("genPlatformDB_IQD_1520", "genPlatformDB_IQD_SDN_1520")
 
-    <section id="generators" class="section">
-      <div class="section-head"><h2>Generator Register</h2><button class="primary" onclick="openForm('generator')">+ Add Generator</button></div>
-      <div class="filters"><input id="genSearch" placeholder="Search generator, model or site..." oninput="renderGenerators()"></div>
-      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Model</th><th>KVA</th><th>Location</th><th>Current SMR</th><th>Next Service</th><th>Status</th><th></th></tr></thead><tbody id="generatorRows"></tbody></table></div>
-    </section>
+# Show real invoice number if displayNo exists.
+html = html.replace("<b>${i.id}</b>", "<b>${i.displayNo||i.id}</b>")
 
-    <section id="smr" class="section">
-      <div class="section-head"><h2>SMR / Running Hours</h2><button class="primary" onclick="openForm('smr')">+ Add Reading</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Generator</th><th>Date</th><th>Previous SMR</th><th>Current SMR</th><th>Operating Hours</th><th>Validation</th><th></th></tr></thead><tbody id="smrRows"></tbody></table></div>
-    </section>
+# Payment invoice dropdown should show display number too.
+html = html.replace("${i.id} — ${i.customer}", "${i.displayNo||i.id} — ${i.customer}")
 
-    <section id="fuel" class="section">
-      <div class="section-head"><h2>Fuel Management</h2><button class="primary" onclick="openForm('fuel')">+ Add Fuel Transaction</button></div>
-      <div class="grid" id="fuelKpis"></div>
-      <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Generator</th><th>Date</th><th>Liters</th><th>Price/L</th><th>Total Cost</th><th>Supplier/Ref.</th><th>L/Hr</th><th></th></tr></thead><tbody id="fuelRows"></tbody></table></div>
-    </section>
+# Add source-data note in Administration.
+admin_note = """<div class="notice" style="margin-bottom:12px"><b>Source Data:</b> Generator register, SMR readings, preventive maintenance history and fuel records are loaded from the supplied SDNs data file. Invoice rows are loaded from the supplied invoice backup.</div>"""
+html = html.replace('<div class="notice" style="margin-bottom:12px"><b>Base Currency:', admin_note + '\n          <div class="notice" style="margin-bottom:12px"><b>Base Currency:')
 
-    <section id="maintenance" class="section">
-      <div class="section-head"><h2>Maintenance Management</h2><div class="toolbar"><button onclick="openForm('preventive')">+ Preventive</button><button class="primary" onclick="openForm('emergency')">+ Emergency</button></div></div>
-      <div class="table-wrap"><table><thead><tr><th>Type</th><th>Generator</th><th>Date</th><th>SMR</th><th>Description</th><th>Cost</th><th>Payment</th><th></th></tr></thead><tbody id="maintenanceRows"></tbody></table></div>
-    </section>
-
-    <section id="expenses" class="section">
-      <div class="section-head"><h2>Expense Management</h2><button class="primary" onclick="openForm('expense')">+ Add Expense</button></div>
-      <div class="grid" id="expenseKpis"></div>
-      <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Generator</th><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Currency</th><th></th></tr></thead><tbody id="expenseRows"></tbody></table></div>
-    </section>
-
-    <section id="invoices" class="section">
-      <div class="section-head"><h2>Invoice Management</h2><button class="primary" onclick="openForm('invoice')">+ New Invoice</button></div>
-      <div class="filters"><input id="invoiceSearch" placeholder="Search invoice, PO or customer..." oninput="renderInvoices()"><select id="invoiceStatusFilter" onchange="renderInvoices()"><option value="">All Statuses</option><option>Paid</option><option>Partially Paid</option><option>Unpaid</option></select></div>
-      <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>PO</th><th>Date</th><th>Customer</th><th>Value</th><th>Received</th><th>Outstanding</th><th>Status</th><th></th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
-    </section>
-
-    <section id="payments" class="section">
-      <div class="section-head"><h2>Payment / Collection Register</h2><button class="primary" onclick="openForm('payment')">+ Record Payment</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th>Bank</th><th>Reference</th><th>Amount Received</th><th>Currency</th><th></th></tr></thead><tbody id="paymentRows"></tbody></table></div>
-    </section>
-
-    <section id="reports" class="section">
-      <div class="section-head"><h2>Reports & Export</h2></div>
-      <div class="report-grid" id="reportGrid"></div>
-    </section>
-
-    <section id="admin" class="section">
-      <div class="section-head"><h2>Administration</h2></div>
-      <div class="two">
-        <div class="card"><h3 style="margin-top:0">System Configuration</h3>
-          <label class="small">Default Maintenance Interval (SMR hours)</label><br><input id="serviceInterval" type="number" value="250" style="margin-top:6px;padding:9px;border:1px solid var(--line);border-radius:8px" onchange="saveConfig()">
-          <p class="small">Used for next-service calculation when a generator-specific interval is not specified.</p>
-        </div>
-        <div class="card"><h3 style="margin-top:0">Role-Based Access (Prototype)</h3>
-          <select id="roleSelect" onchange="setRole(this.value)" style="padding:9px;border:1px solid var(--line);border-radius:8px;width:100%">
-            <option>Administrator</option><option>Operations/User</option><option>Finance/User</option><option>Viewer/Management</option>
-          </select>
-          <p class="small">Prototype UI demonstrates roles. Production deployment should enforce server-side authentication, password hashing and permissions.</p>
-        </div>
-      </div>
-      <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Audit Trail</h3><div class="table-wrap" style="box-shadow:none"><table><thead><tr><th>Date/Time</th><th>Action</th><th>Module</th><th>Record</th><th>User/Role</th></tr></thead><tbody id="auditRows"></tbody></table></div></div>
-    </section>
-  </main>
-</div>
-
-<dialog id="modal">
-  <div class="modal-head"><h3 id="modalTitle"></h3><button onclick="closeModal()">✕</button></div>
-  <form id="modalForm" onsubmit="saveForm(event)">
-    <div class="modal-body"><div class="form" id="formFields"></div></div>
-    <div class="modal-foot"><button type="button" onclick="closeModal()">Cancel</button><button class="primary" type="submit">Save</button></div>
-  </form>
-</dialog>
-
-<script>
-const modules=[
- ['dashboard','Executive Dashboard','Latest operational and financial overview'],
- ['generators','Generators','Central generator register and service status'],
- ['smr','SMR Readings','Running hours and reading history'],
- ['fuel','Fuel','Fuel transactions, cost and efficiency'],
- ['maintenance','Maintenance','Preventive and emergency maintenance'],
- ['expenses','Expenses','Operational expense consolidation'],
- ['invoices','Invoices','Invoice lifecycle and outstanding balances'],
- ['payments','Payments','Payment and collection register'],
- ['reports','Reports','Operational and financial reporting'],
- ['admin','Administration','Configuration, roles and audit trail']
-];
-let activeForm=null;
-const today=()=>new Date().toISOString().slice(0,10);
-const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(v||0))+' '+c;
-const uid=(p)=>p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
-
-const demo={
- generators:[
-  {id:'GEN-001',name:'Main Plant Generator',model:'CAT C15',kva:500,location:'Plant A',currentSmr:4820,lastServiceSmr:4600,lastServiceDate:'2026-07-10',interval:250,status:'Running'},
-  {id:'GEN-002',name:'Camp Generator',model:'Cummins QSX15',kva:400,location:'Camp',currentSmr:7135,lastServiceSmr:6800,lastServiceDate:'2026-06-08',interval:300,status:'Running'},
-  {id:'GEN-003',name:'Workshop Generator',model:'Perkins 2506',kva:300,location:'Workshop',currentSmr:2485,lastServiceSmr:2300,lastServiceDate:'2026-07-22',interval:250,status:'Standby'}
- ],
- smr:[
-  {id:'SMR-1',generatorId:'GEN-001',date:'2026-08-01',previous:4700,current:4765},
-  {id:'SMR-2',generatorId:'GEN-001',date:'2026-08-14',previous:4765,current:4820},
-  {id:'SMR-3',generatorId:'GEN-002',date:'2026-08-14',previous:7050,current:7135},
-  {id:'SMR-4',generatorId:'GEN-003',date:'2026-08-14',previous:2430,current:2485}
- ],
- fuel:[
-  {id:'F-1',generatorId:'GEN-001',date:'2026-08-02',liters:900,price:0.72,supplier:'Fuel Supplier A'},
-  {id:'F-2',generatorId:'GEN-001',date:'2026-08-12',liters:760,price:0.73,supplier:'Fuel Supplier A'},
-  {id:'F-3',generatorId:'GEN-002',date:'2026-08-08',liters:1250,price:0.71,supplier:'Fuel Supplier B'},
-  {id:'F-4',generatorId:'GEN-003',date:'2026-08-11',liters:430,price:0.72,supplier:'Fuel Supplier A'}
- ],
- maintenance:[
-  {id:'M-1',type:'Preventive',generatorId:'GEN-001',date:'2026-07-10',smr:4600,description:'250 Hr service - oil and filters',cost:420,currency:'USD',payment:'Paid'},
-  {id:'M-2',type:'Emergency',generatorId:'GEN-002',date:'2026-08-03',smr:7070,description:'Starter motor repair',cost:680,currency:'USD',payment:'Unpaid'}
- ],
- expenses:[
-  {id:'E-1',generatorId:'GEN-001',date:'2026-08-06',category:'Transportation',description:'Fuel delivery transport',amount:110,currency:'USD'},
-  {id:'E-2',generatorId:'GEN-002',date:'2026-08-04',category:'Spare parts',description:'Starter consumables',amount:145,currency:'USD'},
-  {id:'E-3',generatorId:'GEN-003',date:'2026-08-05',category:'Other operational expenses',description:'Battery inspection',amount:55,currency:'USD'}
- ],
- invoices:[
-  {id:'INV-2026-001',po:'PO-4401',date:'2026-07-31',customer:'Client A',description:'Generator rental and operation',qty:1,unit:'Month',unitPrice:6500,currency:'USD',from:'2026-07-01',to:'2026-07-31'},
-  {id:'INV-2026-002',po:'PO-4402',date:'2026-08-10',customer:'Client B',description:'Generator operation services',qty:1,unit:'Month',unitPrice:8200,currency:'USD',from:'2026-08-01',to:'2026-08-31'}
- ],
- payments:[
-  {id:'P-1',invoiceId:'INV-2026-001',date:'2026-08-05',bank:'Bank A',reference:'SWIFT-88021',amount:6500,currency:'USD'},
-  {id:'P-2',invoiceId:'INV-2026-002',date:'2026-08-12',bank:'Bank B',reference:'TRX-4311',amount:3000,currency:'USD'}
- ],
- audit:[{date:new Date().toLocaleString(),action:'System Initialized',module:'System',record:'Demo data',role:'Administrator'}],
- config:{interval:250,role:'Administrator'}
-};
-let db=JSON.parse(localStorage.getItem('genPlatformDB')||'null')||structuredClone(demo);
-
-function persist(){localStorage.setItem('genPlatformDB',JSON.stringify(db))}
-function log(action,module,record){db.audit.unshift({date:new Date().toLocaleString(),action,module,record,role:db.config.role});persist()}
-function gname(id){return db.generators.find(g=>g.id===id)?.name||id}
-function serviceInfo(g){
+# Improve generator service logic for source inconsistencies:
+# lastServiceMeter may exceed current reading in source; use latest service history below/equal current reading if possible.
+old_func = """function serviceInfo(g){
  const interval=Number(g.interval||db.config.interval||250), next=Number(g.lastServiceSmr||0)+interval, remain=next-Number(g.currentSmr||0);
  return {next,remain,status:remain<0?'Overdue':remain<=50?'Due Soon':'Normal'}
-}
-function invoiceValue(i){return Number(i.qty||0)*Number(i.unitPrice||0)}
-function invoiceReceived(id){return db.payments.filter(p=>p.invoiceId===id).reduce((s,p)=>s+Number(p.amount||0),0)}
-function invoiceStatus(i){let v=invoiceValue(i),r=invoiceReceived(i.id); return r<=0?'Unpaid':r+0.001>=v?'Paid':'Partially Paid'}
-function periodFilter(date){
- const p=document.getElementById('dashPeriod')?.value||'all'; if(p==='all') return true;
- return (Date.now()-new Date(date).getTime())/86400000<=Number(p)
-}
-function opHours(gid){return db.smr.filter(x=>x.generatorId===gid).reduce((s,x)=>s+Math.max(0,Number(x.current)-Number(x.previous)),0)}
-function fuelCost(gid){return db.fuel.filter(x=>(!gid||x.generatorId===gid)&&periodFilter(x.date)).reduce((s,x)=>s+Number(x.liters)*Number(x.price),0)}
-function maintCost(gid){return db.maintenance.filter(x=>(!gid||x.generatorId===gid)&&periodFilter(x.date)).reduce((s,x)=>s+Number(x.cost||0),0)}
-function otherCost(gid){return db.expenses.filter(x=>(!gid||x.generatorId===gid)&&periodFilter(x.date)).reduce((s,x)=>s+Number(x.amount||0),0)}
-function totalCost(gid){return fuelCost(gid)+maintCost(gid)+otherCost(gid)}
+}"""
+new_func = """function serviceInfo(g){
+ const interval=Number(g.interval||db.config.interval||250);
+ const hist=db.maintenance.filter(x=>x.generatorId===g.id&&x.type==='Preventive'&&Number(x.smr)<=Number(g.currentSmr||0)).sort((a,b)=>Number(b.smr)-Number(a.smr));
+ const base=hist.length?Number(hist[0].smr):Number(g.lastServiceSmr||0);
+ const next=base+interval, remain=next-Number(g.currentSmr||0);
+ return {next,remain,status:remain<0?'Overdue':remain<=50?'Due Soon':'Normal'}
+}"""
+html = html.replace(old_func, new_func)
 
-document.getElementById('nav').innerHTML=modules.map((m,i)=>`<button class="${i===0?'active':''}" onclick="showSection('${m[0]}',this)">${m[1]}</button>`).join('');
-function showSection(id,btn){
- document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
- document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
- let m=modules.find(x=>x[0]===id);document.getElementById('pageTitle').textContent=m[1];document.getElementById('pageDesc').textContent=m[2];renderAll()
-}
+# Invoice status: if no payment allocations exist, reflect source status if present instead of declaring unpaid.
+old_status = """function invoiceStatus(i){let v=invoiceValue(i),r=invoiceReceived(i.id); return r<=0?'Unpaid':r+0.001>=v?'Paid':'Partially Paid'}"""
+new_status = """function invoiceStatus(i){
+ let v=invoiceValue(i),r=invoiceReceived(i.id);
+ if(r>0) return r+0.001>=v?'Paid':'Partially Paid';
+ if(i.sourceStatus){
+   let s=String(i.sourceStatus).toLowerCase();
+   if(s==='paid') return 'Paid';
+   if(s.includes('partial')) return 'Partially Paid';
+   if(s==='unpaid') return 'Unpaid';
+ }
+ return 'Unpaid'
+}"""
+html = html.replace(old_status, new_status)
 
-function renderDashboard(){
- const due=db.generators.filter(g=>serviceInfo(g).status!=='Normal').length;
- const liters=db.fuel.filter(x=>periodFilter(x.date)).reduce((s,x)=>s+Number(x.liters),0);
- const inv=db.invoices.filter(x=>periodFilter(x.date)).reduce((s,x)=>s+invoiceValue(x),0);
- const paid=db.payments.filter(x=>periodFilter(x.date)).reduce((s,x)=>s+Number(x.amount),0);
- const outstanding=db.invoices.reduce((s,i)=>s+Math.max(0,invoiceValue(i)-invoiceReceived(i.id)),0);
- let ks=[
-  ['Registered Generators',db.generators.length,'Fleet size'],
-  ['Due / Overdue',due,'Maintenance attention'],
-  ['Fuel Consumption',liters.toFixed(0)+' L','Selected period'],
-  ['Fuel Cost',money(fuelCost()),'Selected period'],
-  ['Maintenance Cost',money(maintCost()),'Preventive + emergency'],
-  ['Invoice Value',money(inv),'Selected period'],
-  ['Payments',money(paid),'Selected period'],
-  ['Outstanding',money(outstanding),'Current balance']
- ];
- document.getElementById('kpis').innerHTML=ks.map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="value">${k[1]}</div><div class="sub">${k[2]}</div></div>`).join('');
- const alerts=db.generators.map(g=>({g,...serviceInfo(g)})).filter(x=>x.status!=='Normal');
- document.getElementById('alerts').innerHTML=alerts.length?alerts.map(x=>`<div class="notice" style="margin:6px 0"><b>${x.g.name}</b> — ${x.status}; ${x.remain<0?Math.abs(x.remain)+' hours overdue':x.remain+' hours remaining'} (next service at SMR ${x.next}).</div>`).join(''):'<div class="notice">No active maintenance alerts.</div>';
- drawCharts();
-}
-function drawBar(canvasId,labels,values){
- const c=document.getElementById(canvasId),ctx=c.getContext('2d');c.width=c.clientWidth*2;c.height=c.clientHeight*2;ctx.scale(2,2);
- let w=c.clientWidth,h=c.clientHeight,p=35,max=Math.max(...values,1);ctx.clearRect(0,0,w,h);ctx.font='11px Segoe UI';ctx.fillStyle='#627284';
- values.forEach((v,i)=>{let bw=(w-p*2)/Math.max(values.length,1)*.55,x=p+i*(w-p*2)/values.length+(w-p*2)/values.length*.2,bh=(h-p*2)*v/max,y=h-p-bh;ctx.fillStyle='#2f78bd';ctx.fillRect(x,y,bw,bh);ctx.fillStyle='#627284';ctx.fillText(labels[i].slice(0,12),x,h-12);ctx.fillText(Math.round(v).toLocaleString(),x,y-6)});
-}
-function drawDonut(){
- const c=document.getElementById('maintChart'),ctx=c.getContext('2d');c.width=c.clientWidth*2;c.height=c.clientHeight*2;ctx.scale(2,2);let w=c.clientWidth,h=c.clientHeight;
- let counts={Normal:0,'Due Soon':0,Overdue:0};db.generators.forEach(g=>counts[serviceInfo(g).status]++);
- let vals=Object.values(counts),sum=vals.reduce((a,b)=>a+b,0)||1,start=-Math.PI/2,cols=['#168a55','#d99500','#c83d3d'];
- vals.forEach((v,i)=>{let ang=Math.PI*2*v/sum;ctx.beginPath();ctx.arc(w*.34,h*.48,72,start,start+ang);ctx.arc(w*.34,h*.48,42,start+ang,start,true);ctx.closePath();ctx.fillStyle=cols[i];ctx.fill();start+=ang});
- ctx.font='12px Segoe UI';Object.keys(counts).forEach((k,i)=>{ctx.fillStyle=cols[i];ctx.fillRect(w*.62,65+i*34,12,12);ctx.fillStyle='#4f6070';ctx.fillText(`${k}: ${counts[k]}`,w*.62+20,76+i*34)});
-}
-function drawCharts(){drawBar('costChart',db.generators.map(g=>g.name),db.generators.map(g=>totalCost(g.id)));drawDonut()}
+# Outstanding/received display: for source invoices marked paid but without payment allocation,
+# treat received = full invoice value for dashboard consistency.
+old_received = """function invoiceReceived(id){return db.payments.filter(p=>p.invoiceId===id).reduce((s,p)=>s+Number(p.amount||0),0)}"""
+new_received = """function invoiceReceived(id){
+ let p=db.payments.filter(x=>x.invoiceId===id).reduce((s,x)=>s+Number(x.amount||0),0);
+ if(p>0) return p;
+ let i=db.invoices.find(x=>x.id===id);
+ if(i&&String(i.sourceStatus||'').toLowerCase()==='paid') return invoiceValue(i);
+ return 0
+}"""
+html = html.replace(old_received, new_received)
 
-function renderGenerators(){
- let q=(document.getElementById('genSearch')?.value||'').toLowerCase();
- let rows=db.generators.filter(g=>[g.id,g.name,g.model,g.location].join(' ').toLowerCase().includes(q)).map(g=>{let s=serviceInfo(g);return `<tr><td><b>${g.id}</b></td><td>${g.name}</td><td>${g.model||''}</td><td>${g.kva||''}</td><td>${g.location||''}</td><td>${g.currentSmr||0}</td><td>${s.next}</td><td><span class="badge ${s.status==='Normal'?'good':s.status==='Due Soon'?'warn':'bad'}">${s.status}</span></td><td><button onclick="removeRecord('generators','${g.id}')">Delete</button></td></tr>`}).join('');
- document.getElementById('generatorRows').innerHTML=rows||'<tr><td colspan="9">No records</td></tr>'
-}
-function renderSMR(){
- document.getElementById('smrRows').innerHTML=[...db.smr].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${gname(x.generatorId)}</td><td>${x.date}</td><td>${x.previous}</td><td><b>${x.current}</b></td><td>${Number(x.current)-Number(x.previous)}</td><td><span class="badge ${Number(x.current)>=Number(x.previous)?'good':'bad'}">${Number(x.current)>=Number(x.previous)?'Valid':'Inconsistent'}</span></td><td><button onclick="removeRecord('smr','${x.id}')">Delete</button></td></tr>`).join('');
-}
-function renderFuel(){
- let liters=db.fuel.reduce((s,x)=>s+Number(x.liters),0),cost=db.fuel.reduce((s,x)=>s+Number(x.liters)*Number(x.price),0);
- document.getElementById('fuelKpis').innerHTML=[['Total Fuel',liters.toFixed(0)+' L'],['Total Cost',money(cost)],['Average Price',money(liters?cost/liters:0)+'/L'],['Fleet L/Hr',(db.smr.reduce((s,x)=>s+Math.max(0,x.current-x.previous),0)?liters/db.smr.reduce((s,x)=>s+Math.max(0,x.current-x.previous),0):0).toFixed(2)]].map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="value">${k[1]}</div></div>`).join('');
- document.getElementById('fuelRows').innerHTML=[...db.fuel].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>{let hrs=opHours(x.generatorId),genLiters=db.fuel.filter(f=>f.generatorId===x.generatorId).reduce((s,f)=>s+Number(f.liters),0);return `<tr><td>${gname(x.generatorId)}</td><td>${x.date}</td><td>${x.liters}</td><td>${money(x.price)}</td><td><b>${money(x.liters*x.price)}</b></td><td>${x.supplier||''}</td><td>${hrs?(genLiters/hrs).toFixed(2):'—'}</td><td><button onclick="removeRecord('fuel','${x.id}')">Delete</button></td></tr>`}).join('');
-}
-function renderMaintenance(){
- document.getElementById('maintenanceRows').innerHTML=[...db.maintenance].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td><span class="badge ${x.type==='Preventive'?'info':'warn'}">${x.type}</span></td><td>${gname(x.generatorId)}</td><td>${x.date}</td><td>${x.smr||'—'}</td><td>${x.description}</td><td>${money(x.cost,x.currency)}</td><td>${x.payment||'—'}</td><td><button onclick="removeRecord('maintenance','${x.id}')">Delete</button></td></tr>`).join('');
-}
-function renderExpenses(){
- let by={};db.expenses.forEach(x=>by[x.category]=(by[x.category]||0)+Number(x.amount));
- document.getElementById('expenseKpis').innerHTML=Object.entries(by).slice(0,4).map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="value">${money(k[1])}</div></div>`).join('')||'<div class="card">No expenses</div>';
- document.getElementById('expenseRows').innerHTML=[...db.expenses].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${gname(x.generatorId)}</td><td>${x.date}</td><td>${x.category}</td><td>${x.description||''}</td><td>${Number(x.amount).toLocaleString()}</td><td>${x.currency}</td><td><button onclick="removeRecord('expenses','${x.id}')">Delete</button></td></tr>`).join('');
-}
-function renderInvoices(){
- let q=(document.getElementById('invoiceSearch')?.value||'').toLowerCase(),sf=document.getElementById('invoiceStatusFilter')?.value||'';
- let xs=db.invoices.filter(i=>[i.id,i.po,i.customer].join(' ').toLowerCase().includes(q)&&(!sf||invoiceStatus(i)===sf));
- document.getElementById('invoiceRows').innerHTML=xs.map(i=>{let v=invoiceValue(i),r=invoiceReceived(i.id),s=invoiceStatus(i);return `<tr><td><b>${i.id}</b></td><td>${i.po||''}</td><td>${i.date}</td><td>${i.customer}</td><td>${money(v,i.currency)}</td><td>${money(r,i.currency)}</td><td><b>${money(Math.max(0,v-r),i.currency)}</b></td><td><span class="badge ${s==='Paid'?'good':s==='Partially Paid'?'warn':'bad'}">${s}</span></td><td><button onclick="duplicateInvoice('${i.id}')">Duplicate</button> <button onclick="removeRecord('invoices','${i.id}')">Delete</button></td></tr>`}).join('');
-}
-function renderPayments(){document.getElementById('paymentRows').innerHTML=[...db.payments].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.invoiceId}</td><td>${x.date}</td><td>${x.bank||''}</td><td>${x.reference||''}</td><td><b>${Number(x.amount).toLocaleString()}</b></td><td>${x.currency}</td><td><button onclick="removeRecord('payments','${x.id}')">Delete</button></td></tr>`).join('')}
-function renderAudit(){document.getElementById('auditRows').innerHTML=db.audit.slice(0,100).map(x=>`<tr><td>${x.date}</td><td>${x.action}</td><td>${x.module}</td><td>${x.record}</td><td>${x.role}</td></tr>`).join('')}
+# Write output.
+outdir = Path("/mnt/data/generator_platform_SDN_IQD")
+outdir.mkdir(exist_ok=True)
+(outdir/"index.html").write_text(html, encoding="utf-8")
 
-const reportDefs=[
- ['Generator Summary','Fleet register, status, capacity, site and SMR','generators'],
- ['Operational Hours','SMR movements and calculated operating hours','smr'],
- ['Maintenance Due','Normal, due-soon and overdue service status','maintenance_due'],
- ['Maintenance History','Preventive and emergency maintenance transactions','maintenance'],
- ['Fuel Consumption','Fuel liters, cost, supplier and efficiency','fuel'],
- ['Generator Expenses','Operational expense transactions','expenses'],
- ['Cost per Operating Hour','Calculated cost efficiency by generator','cost_hour'],
- ['Invoice Report','Invoice values, receipts and statuses','invoices'],
- ['Outstanding Balance','Invoice outstanding balance analysis','outstanding']
-];
-function renderReports(){document.getElementById('reportGrid').innerHTML=reportDefs.map(r=>`<div class="report-card"><h4>${r[0]}</h4><p>${r[1]}</p><button onclick="downloadReport('${r[2]}')">Export CSV</button></div>`).join('')}
-function csvEscape(v){v=String(v??'');return /[",\n]/.test(v)?'"'+v.replaceAll('"','""')+'"':v}
-function downloadCSV(name,rows){
- if(!rows.length){alert('No data to export');return} let keys=Object.keys(rows[0]),csv=[keys.join(','),...rows.map(r=>keys.map(k=>csvEscape(r[k])).join(','))].join('\n');
- let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name+'.csv';a.click()
+summary = {
+    "generators": len(generators),
+    "smr_readings": len(smr),
+    "maintenance_records": len(maintenance),
+    "fuel_records": len(fuel),
+    "invoice_rows": len(invoices),
+    "currency": "IQD",
+    "exchange_rate": "1 USD = 1,520 IQD"
 }
-function downloadReport(type){
- let rows=[];
- if(type==='generators') rows=db.generators.map(g=>({...g,maintenanceStatus:serviceInfo(g).status,nextServiceSmr:serviceInfo(g).next}));
- if(type==='smr') rows=db.smr.map(x=>({...x,generator:gname(x.generatorId),operatingHours:x.current-x.previous}));
- if(type==='maintenance_due') rows=db.generators.map(g=>({id:g.id,generator:g.name,currentSmr:g.currentSmr,nextServiceSmr:serviceInfo(g).next,hoursRemaining:serviceInfo(g).remain,status:serviceInfo(g).status}));
- if(type==='maintenance') rows=db.maintenance.map(x=>({...x,generator:gname(x.generatorId)}));
- if(type==='fuel') rows=db.fuel.map(x=>({...x,generator:gname(x.generatorId),totalCost:x.liters*x.price}));
- if(type==='expenses') rows=db.expenses.map(x=>({...x,generator:gname(x.generatorId)}));
- if(type==='cost_hour') rows=db.generators.map(g=>({generatorId:g.id,generator:g.name,operatingHours:opHours(g.id),totalCost:totalCost(g.id),costPerHour:opHours(g.id)?(totalCost(g.id)/opHours(g.id)).toFixed(2):0}));
- if(type==='invoices'||type==='outstanding') rows=db.invoices.map(i=>({invoice:i.id,customer:i.customer,currency:i.currency,invoiceValue:invoiceValue(i),received:invoiceReceived(i.id),outstanding:Math.max(0,invoiceValue(i)-invoiceReceived(i.id)),status:invoiceStatus(i)}));
- downloadCSV(type,rows)
-}
-function field(name,label,type='text',opts=''){
- if(type==='select') return `<label>${label}<select name="${name}" required>${opts}</select></label>`;
- return `<label>${label}<input name="${name}" type="${type}" ${type==='date'?`value="${today()}"`:''} required></label>`
-}
-function genOpts(){return db.generators.map(g=>`<option value="${g.id}">${g.id} — ${g.name}</option>`).join('')}
-function openForm(type){
- activeForm=type;let title='',f='';
- if(type==='generator'){title='Add Generator';f=field('id','Generator ID')+field('name','Generator Name')+field('model','Manufacturer / Model')+field('kva','Capacity (KVA)','number')+field('location','Location / Site')+field('currentSmr','Current SMR','number')+field('lastServiceSmr','Last Service SMR','number')+field('lastServiceDate','Last Service Date','date')+field('interval','Service Interval (Hours)','number')+field('status','Operational Status','select','<option>Running</option><option>Standby</option><option>Out of Service</option>')}
- if(type==='smr'){title='Add SMR Reading';f=field('generatorId','Generator','select',genOpts())+field('date','Reading Date','date')+field('current','Current SMR','number')}
- if(type==='fuel'){title='Add Fuel Transaction';f=field('generatorId','Generator','select',genOpts())+field('date','Transaction Date','date')+field('liters','Quantity (Liters)','number')+field('price','Price per Liter','number')+field('supplier','Supplier / Reference')}
- if(type==='preventive'||type==='emergency'){title=(type==='preventive'?'Preventive':'Emergency')+' Maintenance';f=field('generatorId','Generator','select',genOpts())+field('date','Maintenance Date','date')+field('smr','SMR','number')+field('description','Description / Work Performed')+field('cost','Cost','number')+field('currency','Currency','select','<option>USD</option><option>IQD</option>')+field('payment','Payment Status','select','<option>Paid</option><option>Unpaid</option><option>Partially Paid</option>')}
- if(type==='expense'){title='Add Expense';f=field('generatorId','Generator','select',genOpts())+field('date','Expense Date','date')+field('category','Category','select','<option>Spare parts</option><option>Transportation</option><option>Generator rental</option><option>Other operational expenses</option>')+field('description','Description')+field('amount','Amount','number')+field('currency','Currency','select','<option>USD</option><option>IQD</option>')}
- if(type==='invoice'){title='Create Invoice';f=field('id','Invoice Number')+field('po','PO Number')+field('date','Invoice Date','date')+field('customer','Company / Customer')+field('description','Description')+field('unit','Unit')+field('qty','Quantity','number')+field('unitPrice','Unit Price','number')+field('currency','Currency','select','<option>USD</option><option>IQD</option>')+field('from','Service From','date')+field('to','Service To','date')}
- if(type==='payment'){title='Record Payment';f=field('invoiceId','Related Invoice','select',db.invoices.map(i=>`<option value="${i.id}">${i.id} — ${i.customer}</option>`).join(''))+field('date','Payment Date','date')+field('bank','Bank')+field('reference','Bank / SWIFT / Reference')+field('amount','Amount Received','number')+field('currency','Currency','select','<option>USD</option><option>IQD</option>')}
- document.getElementById('modalTitle').textContent=title;document.getElementById('formFields').innerHTML=f;document.getElementById('modal').showModal()
-}
-function closeModal(){document.getElementById('modal').close();document.getElementById('modalForm').reset()}
-function saveForm(e){
- e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());
- ['kva','currentSmr','lastServiceSmr','interval','current','liters','price','smr','cost','amount','qty','unitPrice'].forEach(k=>{if(k in o)o[k]=Number(o[k])});
- if(activeForm==='generator'){if(db.generators.some(g=>g.id===o.id)){alert('Generator ID already exists');return}db.generators.push(o);log('Created','Generators',o.id)}
- if(activeForm==='smr'){let g=db.generators.find(g=>g.id===o.generatorId),prev=g?Number(g.currentSmr||0):0;o.id=uid('SMR');o.previous=prev;if(o.current<prev&&!confirm('Current SMR is lower than previous reading. Save as inconsistent?'))return;db.smr.push(o);if(g&&o.current>=prev)g.currentSmr=o.current;log('Created','SMR',o.id)}
- if(activeForm==='fuel'){o.id=uid('F');db.fuel.push(o);log('Created','Fuel',o.id)}
- if(activeForm==='preventive'||activeForm==='emergency'){o.id=uid('M');o.type=activeForm==='preventive'?'Preventive':'Emergency';db.maintenance.push(o);if(o.type==='Preventive'){let g=db.generators.find(g=>g.id===o.generatorId);if(g){g.lastServiceSmr=o.smr;g.lastServiceDate=o.date}}log('Created','Maintenance',o.id)}
- if(activeForm==='expense'){o.id=uid('E');db.expenses.push(o);log('Created','Expenses',o.id)}
- if(activeForm==='invoice'){if(db.invoices.some(i=>i.id===o.id)){alert('Invoice number already exists');return}db.invoices.push(o);log('Created','Invoices',o.id)}
- if(activeForm==='payment'){o.id=uid('P');db.payments.push(o);log('Created','Payments',o.id)}
- persist();closeModal();renderAll()
-}
-function removeRecord(coll,id){
- if(db.config.role==='Viewer/Management'){alert('Viewer role cannot delete records.');return}
- if(!confirm('Delete this record?'))return;let idx=db[coll].findIndex(x=>x.id===id);if(idx>=0){db[coll].splice(idx,1);log('Deleted',coll,id);renderAll()}
-}
-function duplicateInvoice(id){let i=db.invoices.find(x=>x.id===id);if(!i)return;let n=structuredClone(i);n.id=id+'-COPY';let k=1;while(db.invoices.some(x=>x.id===n.id))n.id=id+'-COPY'+(++k);n.date=today();db.invoices.push(n);log('Duplicated','Invoices',id+' → '+n.id);renderAll()}
-function saveConfig(){db.config.interval=Number(document.getElementById('serviceInterval').value||250);log('Updated','Administration','Maintenance Interval')}
-function setRole(role){db.config.role=role;log('Changed Role','Administration',role)}
-function exportBackup(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.download='generator-platform-backup-'+today()+'.json';a.click()}
-function restoreBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);persist();renderAll();alert('Backup restored successfully')}catch{alert('Invalid backup file')}};r.readAsText(f)}
-function renderAll(){renderDashboard();renderGenerators();renderSMR();renderFuel();renderMaintenance();renderExpenses();renderInvoices();renderPayments();renderReports();renderAudit();document.getElementById('serviceInterval').value=db.config.interval;document.getElementById('roleSelect').value=db.config.role}
-renderAll();
-</script>
-</body>
-</html>
+(outdir/"IMPORT_SUMMARY.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+readme = f"""# Generator Operations & Financial Management Platform — SDNs Data Edition
+
+Source data imported:
+- Generators: {len(generators)}
+- SMR readings: {len(smr)}
+- Maintenance records: {len(maintenance)}
+- Fuel records: {len(fuel)}
+- Invoice rows: {len(invoices)}
+
+Currency: IQD
+Approved conversion reference: 1 USD = 1,520 IQD
+
+Important:
+- Generator/SMR/maintenance/fuel records were imported from the supplied generator-system-data JSON.
+- Invoice records were imported from the supplied invoices-backup JSON.
+- Payment allocations were NOT invented. Where the source invoice itself says "paid", the dashboard respects that source status.
+- Any missing fields such as customer or detailed generator model/location remain blank unless directly supported by the supplied data.
 """
-(out/"index.html").write_text(html, encoding="utf-8")
+(outdir/"README.md").write_text(readme, encoding="utf-8")
 
-readme = """# Generator Operations & Financial Management Platform
-
-Prototype based on the supplied SOW.
-
-## Run
-Open `index.html` in Chrome/Edge/Firefox.
-
-## Included
-- Executive dashboard and KPIs
-- Generator register and maintenance due logic
-- SMR/running-hours management
-- Fuel transactions and fuel-cost analysis
-- Preventive and emergency maintenance
-- Expense management
-- Invoice and payment tracking
-- Paid / Partially Paid / Unpaid status
-- Outstanding balance calculation
-- CSV report exports
-- JSON backup/restore
-- Prototype role selector and audit trail
-- Responsive desktop/tablet UI
-
-## Important production note
-This is a browser-based functional prototype using localStorage. The SOW's production requirements such as centralized database, server-side multi-user authentication, password hashing, enforceable RBAC, automated backups, centralized synchronization, and secure server-side audit logging require a backend/database deployment.
-"""
-(out/"README.md").write_text(readme, encoding="utf-8")
-
-zip_path=Path("/mnt/data/Generator_Operations_Financial_Platform_Prototype.zip")
+zip_path = Path("/mnt/data/Generator_Platform_SDN_Data_IQD_1520.zip")
 with zipfile.ZipFile(zip_path,"w",zipfile.ZIP_DEFLATED) as z:
-    for p in out.iterdir():
+    for p in outdir.iterdir():
         z.write(p, arcname=p.name)
 
-print("Created:")
-print(out/"index.html")
-print(out/"README.md")
+print(json.dumps(summary, indent=2))
+print(outdir/"index.html")
 print(zip_path)
