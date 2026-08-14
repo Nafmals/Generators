@@ -110,6 +110,7 @@ button{cursor:pointer}
         <div class="page-head"><div><h3 data-i18n="fuelManagement">Fuel Management</h3><p data-i18n="fuelPageIntro">Track quantities, unit prices, total cost and consumption by generator.</p></div><button class="btn primary" onclick="openFuelModal()" data-i18n="addFuel">Add Fuel Entry</button></div>
         <div class="kpis" id="fuel-kpis"></div>
         <div class="card"><div class="table-tools"><input id="fuel-search" class="field-control search" placeholder="Search fuel records..." /><button class="btn" onclick="exportFuelExcel()" data-i18n="exportExcel">Export Excel</button></div><div class="table-wrap"><table><thead><tr><th data-i18n="date">Date</th><th data-i18n="generator">Generator</th><th data-i18n="liters">Liters</th><th data-i18n="unitPrice">Unit Price</th><th data-i18n="totalCost">Total Cost</th><th data-i18n="note">Note</th><th data-i18n="source">Source</th><th data-i18n="actions">Actions</th></tr></thead><tbody id="fuel-table-body"></tbody></table></div></div>
+        <div class="card" style="margin-top:16px"><div class="card-head"><div><h4 id="fuel-allocation-title">Fuel Invoice Allocation</h4><span id="fuel-allocation-subtitle">Each fueling is split equally between the two generators.</span></div></div><div class="table-wrap"><table><thead><tr><th id="fa-date-head">Date</th><th id="fa-original-head">Original Qty</th><th>Perkins 200 KVA</th><th>Perkins 150 KVA</th><th id="fa-price-head">Unit Price</th><th id="fa-total-head">Invoice Total</th><th id="fa-check-head">Check</th></tr></thead><tbody id="fuel-allocation-body"></tbody><tfoot id="fuel-allocation-foot"></tfoot></table></div></div>
       </section>
 
       <section class="page" id="page-maintenance">
@@ -155,6 +156,8 @@ const DEFAULT_FUEL_RECORDS=[
   {id:'fuel-default-001',date:'2026-08-01',generatorId:'',generatorName:'Perkins 200- KVA-Baghdad -2',liters:500,price:0,totalCost:0,note:''},
   {id:'fuel-default-002',date:'2026-08-01',generatorId:'',generatorName:'Perkins 150- KVA-Baghdad -1',liters:500,price:0,totalCost:0,note:''}
 ];
+const FUEL_ALLOCATION_DATA_VERSION='historic-fuel-split-v1';
+const HISTORICAL_FUEL_BATCHES=[{"id":"fuel-batch-001","date":"2024-06-30","qty":2890,"price":750,"total":2167500},{"id":"fuel-batch-002","date":"2024-06-30","qty":1100,"price":750,"total":825000},{"id":"fuel-batch-003","date":"2024-06-30","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-004","date":"2024-06-30","qty":2000,"price":750,"total":1500000},{"id":"fuel-batch-005","date":"2024-06-30","qty":2100,"price":750,"total":1575000},{"id":"fuel-batch-006","date":"2024-08-30","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-007","date":"2024-08-30","qty":2000,"price":750,"total":1500000},{"id":"fuel-batch-008","date":"2024-10-16","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-009","date":"2024-10-16","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-010","date":"2024-10-16","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-011","date":"2024-12-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-012","date":"2024-12-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-013","date":"2024-12-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-014","date":"2024-12-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-015","date":"2025-03-24","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-016","date":"2025-03-24","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-017","date":"2025-03-24","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-018","date":"2025-03-24","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-019","date":"2025-03-24","qty":2000,"price":750,"total":1500000},{"id":"fuel-batch-020","date":"2025-06-09","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-021","date":"2025-06-09","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-022","date":"2025-06-09","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-023","date":"2025-07-31","qty":2000,"price":750,"total":1500000},{"id":"fuel-batch-024","date":"2025-07-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-025","date":"2025-07-31","qty":1000,"price":750,"total":750000},{"id":"fuel-batch-026","date":"2025-07-31","qty":1000,"price":750,"total":750000}];
 const PROVIDED_READING_DATA_VERSION='aug-2026-readings-v1';
 const PROVIDED_GENERATOR_READINGS=[
   {
@@ -178,7 +181,7 @@ const PROVIDED_GENERATOR_READINGS=[
 ];
 let lang='en';
 let currentModal=null;
-let state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:''};
+let state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:'',fuelDataVersion:''};
 
 const I18N={
  en:{brand:'Generator Operations',overview:'Overview',dashboard:'Dashboard',operations:'Operations',generators:'Generators',fuel:'Fuel',maintenance:'Maintenance',invoices:'Invoices',reports:'Reports',system:'System',audit:'Audit Log',settings:'Settings',offlineReady:'Local-first • No internet required',import:'Import JSON',backup:'Backup JSON',save:'Save Offline',executiveDashboard:'Executive Dashboard',dashboardIntro:'Live totals calculated from the data stored in this offline platform.',print:'Print / PDF',invoiceTrend:'Fuel Consumption Trend',monthlyValues:'Monthly operational fuel consumption (liters)',paymentStatus:'Payment Status',paidVsPending:'Paid vs pending invoice value',invoiceRecords:'invoice records',generatorHealth:'Generator Health',serviceCycle:'200-hour service cycle',fuelSummary:'Fuel Summary',fuelFromAll:'Operational fuel entries only',recentActivity:'Recent Activity',latestRecords:'Latest records',generatorPageIntro:'Running hours, readings, service history and lifecycle status.',addGenerator:'Add Generator',exportExcel:'Export Excel',name:'Name',lastReading:'Last Reading',hoursSinceService:'Hours Since Service',nextDue:'Next Due',status:'Status',actions:'Actions',fuelManagement:'Fuel Management',fuelPageIntro:'Track quantities, unit prices, total cost and consumption by generator.',addFuel:'Add Fuel Entry',date:'Date',generator:'Generator',liters:'Liters',unitPrice:'Unit Price',totalCost:'Total Cost',note:'Note',source:'Source',maintenancePageIntro:'Preventive service history and emergency maintenance records.',addMaintenance:'Add Maintenance',type:'Type',meter:'Meter',cost:'Cost',invoiceManagement:'Invoice Management',invoicePageIntro:'Invoice data, dates, duration, status and company are loaded from Paymants - New(2).xlsx.',addInvoice:'Add Invoice',invoiceNo:'Invoice No.',poContract:'PO / Contract',issueDate:'Issue Date',durationFrom:'Duration From',durationTo:'Duration To',company:'Company',description:'Description',qty:'Qty',unit:'Unit',total:'Total',reportsExports:'Reports & Exports',reportsIntro:'Prepare management outputs by module without internet access.',invoiceReport:'Invoice Report',invoiceReportDesc:'All invoice fields, paid/pending status and amounts.',generatorReport:'Generator Report',generatorReportDesc:'SMR, readings, hours since service, next due and status.',fuelReport:'Fuel Report',fuelReportDesc:'Operational fuel entries only: liters, unit price and total cost.',maintenanceReport:'Maintenance Report',maintenanceReportDesc:'Preventive and emergency maintenance cost history.',fullBackup:'Full JSON Backup',fullBackupDesc:'Portable backup including invoices, generators, fuel, maintenance and audit log.',printManagement:'Management PDF',printManagementDesc:'Use the browser print dialog to save the current report as PDF.',auditLog:'Audit Log',auditIntro:'Local record of additions, edits, deletes and imports.',clearAudit:'Clear Audit',settingsIntro:'Offline data controls and language configuration.',language:'Language',languageDesc:'English and Arabic are separated as a translation layer, so Arabic can be disabled later without changing the data.',offlineStorage:'Offline Storage',offlineStorageDesc:'Changes are stored locally in your browser on this device. Use JSON backup for portability.',importLegacy:'Import Legacy Generator JSON',importLegacyDesc:'Import your generator-system-data.json export from the current JC/JCN generator platform.',resetPlatform:'Reset Local Changes',resetDesc:'Reload the originally embedded invoice backup and remove locally-added operational data.',reset:'Reset',cancel:'Cancel',paid:'Paid',pending:'Pending',totalInvoiceValue:'Total Invoice Value',paidValue:'Paid Value',pendingValue:'Pending Value',fuelQuantity:'Fuel Quantity',fuelCost:'Fuel Cost',generatorCount:'Generators',maintenanceCost:'Maintenance Cost',totalHours:'Operating Hours',records:'records',noData:'No data yet',addFirst:'Add your first record or import your existing generator JSON.',preventive:'Preventive',emergency:'Emergency',edit:'Edit',delete:'Delete',invoice:'Invoice',fuelEntry:'Fuel entry',maintenanceEntry:'Maintenance entry',generatorRecord:'Generator record'},
@@ -205,7 +208,8 @@ function loadState(){
         emergencyMaintenances:Array.isArray(x.emergencyMaintenances)?x.emergencyMaintenances:[],
         audit:Array.isArray(x.audit)?x.audit:[],
         invoiceDataVersion:DATA_VERSION,
-        readingDataVersion:x.readingDataVersion||''
+        readingDataVersion:x.readingDataVersion||'',
+        fuelDataVersion:x.fuelDataVersion||''
       };
       if(!invoiceDataCurrent){
         state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action:'invoice-sync',detail:'Invoices refreshed from Nafmals_Invoices_Edited Excel sheet'});
@@ -226,7 +230,7 @@ function loadState(){
     }
   }catch(e){console.warn(e)}
 }
-function saveState(show=false){state.invoiceDataVersion=DATA_VERSION;localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); if(show) alert(lang==='ar'?'تم حفظ البيانات محليًا على هذا الجهاز.':'Data saved offline on this device.');}
+function saveState(show=false){state.invoiceDataVersion=DATA_VERSION;state.fuelDataVersion=state.fuelDataVersion||'';localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); if(show) alert(lang==='ar'?'تم حفظ البيانات محليًا على هذا الجهاز.':'Data saved offline on this device.');}
 function logAudit(action,detail){state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action,detail});state.audit=state.audit.slice(0,500);saveState(false)}
 
 
@@ -249,6 +253,45 @@ function syncProvidedGeneratorReadings(){
   }
   state.readingDataVersion=PROVIDED_READING_DATA_VERSION;
   if(changed) state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action:'reading-sync',detail:'Inserted August 2026 daily meter readings for Perkins 150 KVA and Perkins 200 KVA generators'});
+  state.audit=state.audit.slice(0,500);
+  saveState(false);
+  return changed;
+}
+
+
+function syncHistoricalFuelAllocations(){
+  if(state.fuelDataVersion===FUEL_ALLOCATION_DATA_VERSION) return false;
+  state.fuelRecords=Array.isArray(state.fuelRecords)?state.fuelRecords:[];
+  const g200=state.generators.find(g=>normalizedGeneratorKey(g.name)===normalizedGeneratorKey('Perkins 200- KVA-Baghdad -2'));
+  const g150=state.generators.find(g=>normalizedGeneratorKey(g.name)===normalizedGeneratorKey('Perkins 150- KVA-Baghdad -1'));
+  let changed=false;
+  for(const batch of HISTORICAL_FUEL_BATCHES){
+    const half=Number(batch.qty)/2;
+    const parts=[
+      {suffix:'g200',g:g200,name:'Perkins 200- KVA-Baghdad -2'},
+      {suffix:'g150',g:g150,name:'Perkins 150- KVA-Baghdad -1'}
+    ];
+    for(const part of parts){
+      const id=batch.id+'-'+part.suffix;
+      if(state.fuelRecords.some(r=>r.id===id)) continue;
+      state.fuelRecords.push({
+        id,
+        batchId:batch.id,
+        batchOriginalQty:Number(batch.qty),
+        sourceType:'invoice-allocation',
+        date:batch.date,
+        generatorId:part.g?.id||'',
+        generatorName:part.name,
+        liters:half,
+        price:Number(batch.price),
+        totalCost:half*Number(batch.price),
+        note:(lang==='ar'?'تقسيم 50% من كمية التعبئة الأصلية':'50% allocation of original fueling quantity')
+      });
+      changed=true;
+    }
+  }
+  state.fuelDataVersion=FUEL_ALLOCATION_DATA_VERSION;
+  if(changed) state.audit.unshift({id:uid('audit'),date:new Date().toISOString(),action:'fuel-allocation-sync',detail:'Inserted 26 historical fuelings split 50/50 across Perkins 200 KVA and Perkins 150 KVA'});
   state.audit=state.audit.slice(0,500);
   saveState(false);
   return changed;
@@ -323,14 +366,37 @@ function mergedFuelRows(){
     price:Number(r.price??r.unitPrice??0),
     totalCost:Number(r.totalCost)||Number(r.liters??r.qty??0)*Number(r.price??r.unitPrice??0),
     note:r.note||'',
-    source:'entry',
+    source:r.sourceType==='invoice-allocation'?'allocation':'entry',
     readonly:false,
     _ref:r
   })).sort((a,b)=>String(b.date).localeCompare(String(a.date)))
 }
-function renderFuel(){const rows=mergedFuelRows(),liters=rows.reduce((s,r)=>s+r.liters,0),cost=rows.reduce((s,r)=>s+r.totalCost,0);$('fuel-kpis').innerHTML=[['fuelQuantity',fmt(liters)+' L',rows.length],['fuelCost',money(cost),rows.length],['unitPrice',liters?money(cost/liters):'0 IQD',liters?1:0]].map(x=>`<div class="kpi"><div class="kpi-label">${t(x[0])}</div><div class="kpi-value">${x[1]}</div><div class="kpi-foot">${x[2]} ${t('records')}</div></div>`).join('');filterFuel()}
-function filterFuel(){const q=($('fuel-search')?.value||'').toLowerCase();const rows=mergedFuelRows().filter(r=>!q||[r.generatorName,r.note,r.date,r.source].join(' ').toLowerCase().includes(q));$('fuel-table-body').innerHTML=rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.generatorName||'-')}</td><td>${fmt(r.liters)}</td><td>${money(r.price)}</td><td class="money">${money(r.totalCost)}</td><td>${esc(String(r.note||'').slice(0,65))}</td><td><span class="pill neutral">${r.source==='invoice'?(lang==='ar'?'فاتورة':'Invoice'):(lang==='ar'?'إدخال':'Entry')}</span></td><td>${r.readonly?'<span class="pill neutral">'+(lang==='ar'?'من الفاتورة':'From invoice')+'</span>':`<button class="btn small" onclick="openFuelModal('${esc(r.id)}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteFuel('${esc(r.id)}')">${t('delete')}</button>`}</td></tr>`).join('')||`<tr><td colspan="8"><div class="empty">${t('noData')}</div></td></tr>`}
+function renderFuel(){const rows=mergedFuelRows(),liters=rows.reduce((s,r)=>s+r.liters,0),cost=rows.reduce((s,r)=>s+r.totalCost,0);$('fuel-kpis').innerHTML=[['fuelQuantity',fmt(liters)+' L',rows.length],['fuelCost',money(cost),rows.length],['unitPrice',liters?money(cost/liters):'0 IQD',liters?1:0]].map(x=>`<div class="kpi"><div class="kpi-label">${t(x[0])}</div><div class="kpi-value">${x[1]}</div><div class="kpi-foot">${x[2]} ${t('records')}</div></div>`).join('');filterFuel();renderFuelAllocationTable()}
+function filterFuel(){const q=($('fuel-search')?.value||'').toLowerCase();const rows=mergedFuelRows().filter(r=>!q||[r.generatorName,r.note,r.date,r.source].join(' ').toLowerCase().includes(q));$('fuel-table-body').innerHTML=rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.generatorName||'-')}</td><td>${fmt(r.liters)}</td><td>${money(r.price)}</td><td class="money">${money(r.totalCost)}</td><td>${esc(String(r.note||'').slice(0,65))}</td><td><span class="pill neutral">${r.source==='allocation'?(lang==='ar'?'تقسيم فاتورة':'Invoice allocation'):(lang==='ar'?'إدخال':'Entry')}</span></td><td>${r.readonly?'<span class="pill neutral">'+(lang==='ar'?'من الفاتورة':'From invoice')+'</span>':`<button class="btn small" onclick="openFuelModal('${esc(r.id)}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteFuel('${esc(r.id)}')">${t('delete')}</button>`}</td></tr>`).join('')||`<tr><td colspan="8"><div class="empty">${t('noData')}</div></td></tr>`}
 $('fuel-search').oninput=filterFuel;
+function renderFuelAllocationTable(){
+  const body=$('fuel-allocation-body'),foot=$('fuel-allocation-foot'); if(!body||!foot) return;
+  $('fuel-allocation-title').textContent=lang==='ar'?'تقسيم فواتير الوقود':'Fuel Invoice Allocation';
+  $('fuel-allocation-subtitle').textContent=lang==='ar'?'كل تعبئة مقسمة بالتساوي 50% / 50% بين المولدين.':'Each fueling is split equally 50% / 50% between the two generators.';
+  $('fa-date-head').textContent=lang==='ar'?'تاريخ الفاتورة':'Invoice Date';
+  $('fa-original-head').textContent=lang==='ar'?'الكمية الأصلية':'Original Qty';
+  $('fa-price-head').textContent=lang==='ar'?'سعر اللتر':'Unit Price';
+  $('fa-total-head').textContent=lang==='ar'?'إجمالي الفاتورة':'Invoice Total';
+  $('fa-check-head').textContent=lang==='ar'?'مطابقة':'Check';
+  const allocated=state.fuelRecords.filter(r=>r.batchId&&r.sourceType==='invoice-allocation');
+  const groups=new Map();
+  for(const r of allocated){
+    if(!groups.has(r.batchId)) groups.set(r.batchId,{batchId:r.batchId,date:r.date,original:Number(r.batchOriginalQty||0),price:Number(r.price||0),g200:0,g150:0});
+    const g=groups.get(r.batchId); g.date=r.date||g.date; g.original=Number(r.batchOriginalQty||g.original); g.price=Number(r.price||g.price);
+    const key=normalizedGeneratorKey(r.generatorName||generatorName(r.generatorId));
+    if(key===normalizedGeneratorKey('Perkins 200- KVA-Baghdad -2')) g.g200+=Number(r.liters||0);
+    if(key===normalizedGeneratorKey('Perkins 150- KVA-Baghdad -1')) g.g150+=Number(r.liters||0);
+  }
+  const rows=[...groups.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.batchId).localeCompare(String(b.batchId)));
+  body.innerHTML=rows.map(g=>{const sum=g.g200+g.g150,ok=Math.abs(sum-g.original)<0.001;return `<tr><td>${esc(g.date)}</td><td><b>${fmt(g.original)} L</b></td><td>${fmt(g.g200)} L</td><td>${fmt(g.g150)} L</td><td>${money(g.price)}</td><td class="money">${money(g.original*g.price)}</td><td><span class="pill ${ok?'paid':'unpaid'}">${ok?(lang==='ar'?'مطابق':'Matched'):(lang==='ar'?'راجع':'Review')}</span></td></tr>`}).join('')||`<tr><td colspan="7"><div class="empty">${t('noData')}</div></td></tr>`;
+  const original=rows.reduce((s,g)=>s+g.original,0),g200=rows.reduce((s,g)=>s+g.g200,0),g150=rows.reduce((s,g)=>s+g.g150,0),totalCost=rows.reduce((s,g)=>s+g.original*g.price,0);
+  foot.innerHTML=rows.length?`<tr style="font-weight:800;background:#f8fafc"><td>${lang==='ar'?'الإجمالي':'TOTAL'}</td><td>${fmt(original)} L</td><td>${fmt(g200)} L</td><td>${fmt(g150)} L</td><td>${money(original?totalCost/original:0)}</td><td>${money(totalCost)}</td><td>${Math.abs((g200+g150)-original)<.001?'✓':'!'}</td></tr>`:'';
+}
 
 function renderMaintenance(){const rows=allMaintenance(),cost=rows.reduce((s,r)=>s+r.cost,0),preventive=rows.filter(r=>r.type==='preventive').length,emergency=rows.filter(r=>r.type==='emergency').length;$('maintenance-kpis').innerHTML=[[lang==='ar'?'إجمالي كلفة الصيانة':'Total Maintenance Cost',money(cost),rows.length],[lang==='ar'?'صيانة وقائية':'Preventive Services',fmt(preventive),preventive],[lang==='ar'?'صيانة طارئة':'Emergency Services',fmt(emergency),emergency]].map(x=>`<div class="kpi"><div class="kpi-label">${x[0]}</div><div class="kpi-value">${x[1]}</div><div class="kpi-foot">${x[2]} ${t('records')}</div></div>`).join('');filterMaintenance()}
 function filterMaintenance(){const q=($('maint-search')?.value||'').toLowerCase();const rows=allMaintenance().filter(r=>!q||[r.generatorName,r.note,r.type,r.date].join(' ').toLowerCase().includes(q));$('maintenance-table-body').innerHTML=rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.generatorName||'-')}</td><td><span class="pill ${r.type==='emergency'?'unpaid':'paid'}">${r.type==='emergency'?t('emergency'):t('preventive')}</span></td><td>${fmt(r.meter)}</td><td class="money">${money(r.cost)}</td><td>${esc(r.note||'')}</td><td><button class="btn small" onclick="openMaintenanceModal('${esc(r.id)}','${r.type}')">${t('edit')}</button> <button class="btn small danger" onclick="deleteMaintenance('${esc(r.id)}','${r.type}')">${t('delete')}</button></td></tr>`).join('')||`<tr><td colspan="7"><div class="empty">${t('noData')}</div></td></tr>`}
@@ -377,7 +443,7 @@ function deleteMaintenance(id,type){if(confirm(lang==='ar'?'حذف سجل الص
 function exportBackup(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json;charset=utf-8'});downloadBlob(blob,'Nafithat-Generator-Operations-Backup.json')}
 $('export-data').onclick=exportBackup;$('save-data').onclick=()=>saveState(true);$('import-data').onclick=()=>$('import-file').click();
 $('import-file').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result);if(Array.isArray(data)){state.invoices=data;logAudit('import','Imported invoice JSON array: '+data.length+' records')}else{if(Array.isArray(data.invoices))state.invoices=data.invoices;if(Array.isArray(data.generators))state.generators=data.generators;if(Array.isArray(data.fuelRecords))state.fuelRecords=data.fuelRecords;if(Array.isArray(data.emergencyMaintenances))state.emergencyMaintenances=data.emergencyMaintenances;logAudit('import','Imported platform/generator JSON')}saveState(false);renderAll();alert(lang==='ar'?'تم الاستيراد بنجاح.':'Import completed.')}catch(err){alert((lang==='ar'?'تعذر الاستيراد: ':'Import failed: ')+err.message)}};rd.readAsText(f);e.target.value=''};
-function resetPlatform(){if(confirm(lang==='ar'?'سيتم حذف التغييرات المحلية وإرجاع بيانات الفواتير الأصلية. متابعة؟':'This will remove local changes and restore the embedded invoice backup. Continue?')){localStorage.removeItem(STORAGE_KEY);state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:''};syncProvidedGeneratorReadings();saveState(false);renderAll()}}
+function resetPlatform(){if(confirm(lang==='ar'?'سيتم حذف التغييرات المحلية وإرجاع بيانات الفواتير الأصلية. متابعة؟':'This will remove local changes and restore the embedded invoice backup. Continue?')){localStorage.removeItem(STORAGE_KEY);state={invoices:structuredClone(EMBEDDED_INVOICES),generators:[],fuelRecords:structuredClone(DEFAULT_FUEL_RECORDS),emergencyMaintenances:[],audit:[],invoiceDataVersion:DATA_VERSION,readingDataVersion:'',fuelDataVersion:''};syncProvidedGeneratorReadings();saveState(false);renderAll()}}
 
 function downloadBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),500)}
 function exportExcelHtml(filename,title,headers,rows){const cells=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');let x=`<html><head><meta charset="UTF-8"></head><body><h2>${cells(title)}</h2><table border="1"><tr>${headers.map(h=>'<th>'+cells(h)+'</th>').join('')}</tr>${rows.map(r=>'<tr>'+r.map(v=>'<td>'+cells(v)+'</td>').join('')+'</tr>').join('')}</table></body></html>`;downloadBlob(new Blob(['\ufeff'+x],{type:'application/vnd.ms-excel;charset=utf-8'}),filename)}
@@ -387,6 +453,6 @@ function exportFuelExcel(){exportExcelHtml('Fuel-Report.xls','Fuel Report',['Dat
 function exportMaintenanceExcel(){exportExcelHtml('Maintenance-Report.xls','Maintenance Report',['Date','Generator','Type','Meter','Cost IQD','Note'],allMaintenance().map(r=>[r.date,r.generatorName,r.type,r.meter,r.cost,r.note]))}
 
 $('modal-backdrop').addEventListener('click',e=>{if(e.target===$('modal-backdrop'))closeModal()});
-loadState();syncProvidedGeneratorReadings();setLanguage('en');renderAll();
+loadState();syncProvidedGeneratorReadings();syncHistoricalFuelAllocations();setLanguage('en');renderAll();
 </script>
 </body></html>
